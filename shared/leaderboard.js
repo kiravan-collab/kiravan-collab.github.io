@@ -50,6 +50,8 @@
       raw = 2000 - moves * 60 - timeSec * 4;
     } else if (gameId === 'lights-out') {
       raw = 2000 - moves * 50 - timeSec * 4;
+    } else if (gameId === 'slide-puzzle') {
+      raw = 2500 - moves * 20 - timeSec * 3;
     } else {
       raw = 2000 - moves * 50 - timeSec * 4;
     }
