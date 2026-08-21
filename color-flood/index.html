@@ -66,6 +66,19 @@
     justify-content:space-between;
     gap:8px;
   }
+  .left-group{ display:flex; align-items:center; gap:8px; }
+  .home-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    font-size:15px;
+    text-decoration:none;
+    flex-shrink:0;
+  }
+  .home-btn:active{ transform:scale(0.94); }
   .title{
     font-family:'Baloo 2', system-ui, sans-serif;
     font-weight:800;
@@ -313,7 +326,10 @@
   <div class="ad-slot top">광고 영역 (320×50)</div>
 
   <header>
-    <div class="title"><span class="dot"></span>컬러 플러드</div>
+    <div class="left-group">
+      <a class="home-btn" href="../" title="미니게임 서랍으로">🏠</a>
+      <div class="title"><span class="dot"></span>컬러 플러드</div>
+    </div>
     <div style="display:flex; gap:6px; align-items:center;">
       <button class="rank-btn" id="rankOpenBtn">🏆 랭킹</button>
     </div>
