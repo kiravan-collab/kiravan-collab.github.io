@@ -491,12 +491,9 @@
     enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:5 }
   };
 
-  // 배경 타일 확대 배율
-  //  타일이 작으면 가로로 너무 여러 번 반복되어 어지러워 보입니다.
-  //  화면 가로는 360px이므로, 예를 들어 64px 타일에 3을 주면 192px가 되어
-  //  가로 약 1.9회만 반복됩니다. 도트가 뭉개지지 않도록 정수를 쓰세요.
-  //  1 = 원본 크기, 2·3·4 = 확대
-  const TILE_SCALE = 2;
+  // 배경 타일은 가로 폭에 딱 한 번 채워지고(가로 반복 없음),
+  // 스크롤에 맞춰 위아래로만 이어 붙습니다.
+  // 타일 이미지는 세로로 이어지도록 만들어져 있어 이음매가 보이지 않습니다.
 
   const IMG = {};
   function loadAssets(){
@@ -708,14 +705,12 @@
       ctx.fillStyle = st.ground;
       ctx.fillRect(0,0,W,H);
 
-      const s = Math.max(1, TILE_SCALE);
-      const tw = tile.width * s, th = tile.height * s;
+      // 가로는 화면 폭에 정확히 한 번(가로 이음매 없음), 세로만 반복
+      const th = Math.round(tile.height * (W / tile.width));
       const offY = ((sy % th) + th) % th;
       for(let y = -offY; y < H; y += th){
-        for(let x = 0; x < W; x += tw){
-          ctx.drawImage(tile, 0, 0, tile.width, tile.height,
-                        Math.round(x), Math.round(y), tw, th);
-        }
+        ctx.drawImage(tile, 0, 0, tile.width, tile.height,
+                      0, Math.round(y), W, th);
       }
       ctx.fillStyle = st.tint;
       ctx.fillRect(0,0,W,H);
