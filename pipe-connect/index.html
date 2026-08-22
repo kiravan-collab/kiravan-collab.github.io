@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>파이프 커넥트 · 물길을 이어라</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#0d1520;
+    --bg-2:#132030;
+    --panel:#1a2838;
+    --panel-2:#213044;
+    --ink:#eef4f2;
+    --ink-dim:#8fa6b8;
+    --line:rgba(255,255,255,0.08);
+    --accent:#3fd0c9;
+    --accent-2:#4a9ee8;
+    --pipe-off:#3c4c60;
+    --pipe-on:#3fd0c9;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100svh;
+    background:
+      radial-gradient(circle at 18% 0%, #1c3348 0%, transparent 55%),
+      radial-gradient(circle at 85% 100%, #16283a 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:14px 12px calc(14px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+    -webkit-user-select:none; user-select:none;
+    touch-action:manipulation;
+  }
+
+  .wrap{width:100%; max-width:440px; display:flex; flex-direction:column; gap:12px; align-items:center;}
+
+  .ad-slot{
+    width:100%;
+    display:flex; align-items:center; justify-content:center;
+    background:repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 10px, rgba(255,255,255,0.015) 10px 20px);
+    border:1px dashed rgba(255,255,255,0.18);
+    border-radius:10px;
+    color:var(--ink-dim);
+    font-size:11px;
+    letter-spacing:.04em;
+  }
+  .ad-slot.top{ min-height:50px; max-width:320px; margin:0 auto; }
+  .ad-slot.result{ min-height:100px; margin-top:6px; }
+
+  header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .left-group{ display:flex; align-items:center; gap:8px; }
+  .home-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    font-size:15px;
+    text-decoration:none;
+    flex-shrink:0;
+  }
+  .home-btn:active{ transform:scale(0.94); }
+  .title{
+    font-family:'Baloo 2', system-ui, sans-serif;
+    font-weight:800;
+    font-size:20px;
+    letter-spacing:-0.01em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .title .drop{
+    width:12px;height:14px;
+    border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+    background:linear-gradient(160deg,var(--accent),var(--accent-2));
+    display:inline-block;
+  }
+  .rank-btn{
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    padding:6px 11px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .rank-btn:active{ transform:scale(0.96); }
+
+  .stats{ display:flex; gap:8px; }
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:6px 10px;
+    text-align:center;
+    min-width:56px;
+  }
+  .stat .num{ font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; line-height:1.1;}
+  .stat .lbl{ font-size:9px; color:var(--ink-dim); letter-spacing:.03em; margin-top:1px;}
+
+  .board-card{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:12px;
+    box-shadow:0 20px 40px -20px rgba(0,0,0,0.65);
+  }
+  #board{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    grid-template-rows:repeat(5, 1fr);
+    width:100%;
+    aspect-ratio:1/1;
+    gap:4px;
+  }
+  .cell{
+    position:relative;
+    width:100%; height:100%;
+    border:none;
+    border-radius:8px;
+    background:rgba(255,255,255,0.025);
+    cursor:pointer;
+    padding:0;
+    overflow:hidden;
+    transition:background .2s ease;
+  }
+  .cell:active{ transform:scale(0.94); }
+  .cell svg{ width:100%; height:100%; display:block; }
+  .cell .pipe{
+    stroke:var(--pipe-off);
+    stroke-width:13;
+    stroke-linecap:round;
+    fill:none;
+    transition:stroke .3s ease;
+  }
+  .cell.lit .pipe{ stroke:var(--pipe-on); }
+  .cell.lit{ background:rgba(63,208,201,0.08); }
+  .cell .node{
+    fill:var(--pipe-off);
+    transition:fill .3s ease;
+  }
+  .cell.lit .node{ fill:var(--pipe-on); }
+  .cell.source .node{ fill:var(--accent-2); }
+  .cell.source{ background:rgba(74,158,232,0.12); }
+  .cell.goal .node{ fill:#f4b740; }
+  .cell.goal{ background:rgba(244,183,64,0.10); }
+  .cell.goal.lit{ background:rgba(63,208,201,0.20); }
+  .rot-wrap{
+    width:100%; height:100%;
+    transition:transform .22s cubic-bezier(.34,1.4,.64,1);
+  }
+
+  .actions{ width:100%; display:flex; justify-content:center; }
+  .ghost-btn{
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--ink-dim);
+    font-size:12.5px;
+    padding:9px 16px;
+    border-radius:12px;
+    cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .ghost-btn:active{ transform:scale(0.97); }
+
+  .hint{
+    color:var(--ink-dim);
+    font-size:12px;
+    text-align:center;
+    line-height:1.5;
+  }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(6,12,20,0.72);
+    backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:50;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .modal{
+    width:100%; max-width:360px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:22px 20px 18px;
+    text-align:center;
+    transform:translateY(12px) scale(0.98);
+    transition:transform .25s ease;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .overlay.show .modal{ transform:translateY(0) scale(1); }
+  .modal .big{ font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; margin-bottom:4px; }
+  .modal .sub{ color:var(--ink-dim); font-size:13px; margin-bottom:16px;}
+  .modal .row{ display:flex; gap:8px; margin-bottom:6px; }
+  .modal .box{ flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 6px; }
+  .modal .box .num{ font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px;}
+  .modal .box .lbl{ font-size:10px; color:var(--ink-dim); margin-top:2px;}
+
+  .rank-line{ margin-top:10px; font-size:13px; color:var(--accent); font-weight:700; min-height:18px; }
+
+  .btn{
+    margin-top:16px; width:100%; border:none; border-radius:14px; padding:14px;
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16px; color:#05202a;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    cursor:pointer; transition:transform .12s ease;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn.secondary{ background:var(--panel); color:var(--ink); border:1px solid var(--line); }
+
+  .name-input{
+    width:100%; margin-top:10px; padding:12px 14px; border-radius:12px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    font-size:15px; font-family:'Inter',sans-serif; text-align:center;
+  }
+  .name-input:focus{ outline:2px solid var(--accent); }
+
+  .rank-list{ margin-top:14px; text-align:left; display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; }
+  .rank-row{ display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+  .rank-row.me{ border-color:var(--accent); background:rgba(63,208,201,0.12); }
+  .rank-row .pos{ font-family:'Baloo 2',sans-serif; font-weight:700; width:22px; text-align:center; color:var(--ink-dim); flex-shrink:0; }
+  .rank-row.top1 .pos{ color:#ffd76a; }
+  .rank-row.top2 .pos{ color:#d9dbe6; }
+  .rank-row.top3 .pos{ color:#e0a672; }
+  .rank-row .rname{ flex:1; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rank-row .rpts{ font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px; color:var(--accent); }
+  .rank-empty, .rank-loading{ color:var(--ink-dim); font-size:12.5px; padding:14px 0; }
+
+  footer{ color:var(--ink-dim); font-size:11px; text-align:center; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ============ 광고 영역 (상단 배너) ============ -->
+  <div class="ad-slot top">광고 영역 (320×50)</div>
+
+  <header>
+    <div class="left-group">
+      <a class="home-btn" href="../" title="미니게임 서랍으로">🏠</a>
+      <div class="title"><span class="drop"></span>파이프 커넥트</div>
+    </div>
+    <button class="rank-btn" id="rankOpenBtn">🏆 랭킹</button>
+  </header>
+
+  <div style="width:100%; display:flex; gap:8px; justify-content:flex-end;">
+    <div class="stat"><div class="num" id="statTime">0:00</div><div class="lbl">시간</div></div>
+    <div class="stat"><div class="num" id="statBest">-</div><div class="lbl">최고기록</div></div>
+    <div class="stat"><div class="num" id="statMoves">0</div><div class="lbl">회전</div></div>
+  </div>
+
+  <div class="board-card">
+    <div id="board"></div>
+  </div>
+
+  <div class="actions">
+    <button class="ghost-btn" id="reshuffleBtn">🔀 새로 섞기</button>
+  </div>
+
+  <p class="hint">타일을 눌러 회전시켜서 <b style="color:var(--accent-2)">파란 수원</b>에서 <b style="color:#f4b740">노란 수도</b>까지<br>파이프를 모두 이어주세요.</p>
+
+  <footer>한 판 1~3분 · 심심할 때 부담없이</footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="big">물길 완성!</div>
+    <div class="sub" id="resultSub">수원에서 수도까지 이어졌어요</div>
+    <div class="row">
+      <div class="box"><div class="num" id="resMoves">0</div><div class="lbl">회전 횟수</div></div>
+      <div class="box"><div class="num" id="resTime">0:00</div><div class="lbl">걸린 시간</div></div>
+    </div>
+    <div class="rank-line" id="rankLine"></div>
+
+    <!-- ============ 광고 영역 (결과 화면) ============ -->
+    <div class="ad-slot result">광고 영역 (결과 화면)</div>
+
+    <button class="btn" id="retryBtn">다시 하기</button>
+    <button class="btn secondary" id="viewRankFromResultBtn">🏆 전체 랭킹 보기</button>
+  </div>
+</div>
+
+<!-- 닉네임 입력 모달 -->
+<div class="overlay" id="nameOverlay">
+  <div class="modal">
+    <div class="big">닉네임을 정해주세요</div>
+    <div class="sub">랭킹에 표시될 이름이에요 (최대 20자, 언제든 변경 가능)</div>
+    <input type="text" id="nameInput" class="name-input" placeholder="예: 물길요정" maxlength="20">
+    <button class="btn" id="nameSaveBtn">저장하고 랭킹 등록</button>
+  </div>
+</div>
+
+<!-- 랭킹 모달 -->
+<div class="overlay" id="rankOverlay">
+  <div class="modal">
+    <div class="big">🏆 파이프 커넥트 랭킹</div>
+    <div class="sub">회전 횟수와 시간이 좋을수록 점수가 높아요</div>
+    <div class="rank-list" id="rankList"><div class="rank-loading">불러오는 중...</div></div>
+    <button class="btn secondary" id="rankCloseBtn">닫기</button>
+  </div>
+</div>
+
+<!-- Firebase (전체 방문자 공유 랭킹) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase-config.js"></script>
+<script src="../shared/leaderboard.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  const GAME_ID = 'pipe-connect';
+  const SIZE = 5;
+  const BEST_KEY = 'pipeconnect_best_moves_v1';
+
+  // 방향 비트: 0=위, 1=오른쪽, 2=아래, 3=왼쪽
+  const UP=1, RIGHT=2, DOWN=4, LEFT=8;
+  const DIRS = [
+    { bit:UP,    dr:-1, dc:0,  opp:DOWN  },
+    { bit:RIGHT, dr:0,  dc:1,  opp:LEFT  },
+    { bit:DOWN,  dr:1,  dc:0,  opp:UP    },
+    { bit:LEFT,  dr:0,  dc:-1, opp:RIGHT }
+  ];
+
+  let tiles = [];        // 각 칸의 연결 비트마스크
+  let sourceIdx = 0;
+  let goalIdx = 0;
+  let movesUsed = 0;
+  let startTime = 0;
+  let timerId = null;
+  let ended = false;
+  let pendingSubmitStats = null;
+
+  const boardEl = document.getElementById('board');
+  const statTimeEl = document.getElementById('statTime');
+  const statBestEl = document.getElementById('statBest');
+  const statMovesEl = document.getElementById('statMoves');
+  const overlayEl = document.getElementById('overlay');
+  const resultSubEl = document.getElementById('resultSub');
+  const resMovesEl = document.getElementById('resMoves');
+  const resTimeEl = document.getElementById('resTime');
+  const rankLineEl = document.getElementById('rankLine');
+  const retryBtn = document.getElementById('retryBtn');
+  const reshuffleBtn = document.getElementById('reshuffleBtn');
+
+  const rankOpenBtn = document.getElementById('rankOpenBtn');
+  const rankOverlayEl = document.getElementById('rankOverlay');
+  const rankListEl = document.getElementById('rankList');
+  const rankCloseBtn = document.getElementById('rankCloseBtn');
+  const viewRankFromResultBtn = document.getElementById('viewRankFromResultBtn');
+
+  const nameOverlayEl = document.getElementById('nameOverlay');
+  const nameInputEl = document.getElementById('nameInput');
+  const nameSaveBtn = document.getElementById('nameSaveBtn');
+
+  const idx = (r,c) => r*SIZE + c;
+  const rowOf = i => Math.floor(i/SIZE);
+  const colOf = i => i % SIZE;
+
+  // 비트마스크를 시계방향 90도 회전
+  function rotate(mask){
+    let out = 0;
+    if(mask & UP)    out |= RIGHT;
+    if(mask & RIGHT) out |= DOWN;
+    if(mask & DOWN)  out |= LEFT;
+    if(mask & LEFT)  out |= UP;
+    return out;
+  }
+
+  // 랜덤 스패닝 트리(미로) 생성 -> 항상 풀 수 있는 배치
+  function generateMaze(){
+    const total = SIZE*SIZE;
+    const conn = new Array(total).fill(0);
+    const visited = new Array(total).fill(false);
+
+    const start = Math.floor(Math.random()*total);
+    visited[start] = true;
+    const frontier = [start];
+
+    while(frontier.length){
+      // 랜덤 백트래킹으로 자연스러운 가지 형태 생성
+      const pickPos = Math.random() < 0.65 ? frontier.length-1 : Math.floor(Math.random()*frontier.length);
+      const cur = frontier[pickPos];
+      const r = rowOf(cur), c = colOf(cur);
+
+      const options = [];
+      DIRS.forEach(d => {
+        const nr = r + d.dr, nc = c + d.dc;
+        if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) return;
+        const ni = idx(nr,nc);
+        if(visited[ni]) return;
+        options.push({ dir:d, ni:ni });
+      });
+
+      if(options.length === 0){
+        frontier.splice(pickPos,1);
+        continue;
+      }
+
+      const pick = options[Math.floor(Math.random()*options.length)];
+      conn[cur] |= pick.dir.bit;
+      conn[pick.ni] |= pick.dir.opp;
+      visited[pick.ni] = true;
+      frontier.push(pick.ni);
+    }
+
+    return conn;
+  }
+
+  // 트리에서 가장 먼 두 지점(대략)을 수원/수도로 지정
+  function pickEndpoints(conn){
+    function bfsFar(from){
+      const dist = new Array(SIZE*SIZE).fill(-1);
+      dist[from] = 0;
+      const q = [from];
+      let far = from;
+      while(q.length){
+        const cur = q.shift();
+        if(dist[cur] > dist[far]) far = cur;
+        const r = rowOf(cur), c = colOf(cur);
+        DIRS.forEach(d => {
+          if(!(conn[cur] & d.bit)) return;
+          const nr = r+d.dr, nc = c+d.dc;
+          if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) return;
+          const ni = idx(nr,nc);
+          if(dist[ni] !== -1) return;
+          dist[ni] = dist[cur]+1;
+          q.push(ni);
+        });
+      }
+      return far;
+    }
+    const a = bfsFar(0);
+    const b = bfsFar(a);
+    return { source:a, goal:b };
+  }
+
+  // 파이프 모양 SVG 생성
+  function pipeSvg(mask){
+    const cx = 50, cy = 50;
+    let paths = '';
+    if(mask & UP)    paths += `<line class="pipe" x1="${cx}" y1="${cy}" x2="${cx}" y2="4"/>`;
+    if(mask & RIGHT) paths += `<line class="pipe" x1="${cx}" y1="${cy}" x2="96" y2="${cy}"/>`;
+    if(mask & DOWN)  paths += `<line class="pipe" x1="${cx}" y1="${cy}" x2="${cx}" y2="96"/>`;
+    if(mask & LEFT)  paths += `<line class="pipe" x1="${cx}" y1="${cy}" x2="4" y2="${cy}"/>`;
+    const node = `<circle class="node" cx="${cx}" cy="${cy}" r="11"/>`;
+    return `<svg viewBox="0 0 100 100">${paths}${node}</svg>`;
+  }
+
+  function buildBoardDom(){
+    boardEl.innerHTML = '';
+    for(let i=0;i<SIZE*SIZE;i++){
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      const wrap = document.createElement('div');
+      wrap.className = 'rot-wrap';
+      btn.appendChild(wrap);
+      btn.addEventListener('click', () => onTap(i));
+      boardEl.appendChild(btn);
+    }
+  }
+
+  function paint(){
+    const cells = boardEl.children;
+    const lit = computeLit();
+    for(let i=0;i<tiles.length;i++){
+      const cell = cells[i];
+      cell.querySelector('.rot-wrap').innerHTML = pipeSvg(tiles[i]);
+      cell.classList.toggle('lit', lit.has(i));
+      cell.classList.toggle('source', i === sourceIdx);
+      cell.classList.toggle('goal', i === goalIdx);
+    }
+  }
+
+  // 수원에서 연결된 칸들 계산
+  function computeLit(){
+    const seen = new Set([sourceIdx]);
+    const q = [sourceIdx];
+    while(q.length){
+      const cur = q.shift();
+      const r = rowOf(cur), c = colOf(cur);
+      DIRS.forEach(d => {
+        if(!(tiles[cur] & d.bit)) return;
+        const nr = r+d.dr, nc = c+d.dc;
+        if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) return;
+        const ni = idx(nr,nc);
+        if(!(tiles[ni] & d.opp)) return;   // 양쪽이 서로 맞물려야 연결
+        if(seen.has(ni)) return;
+        seen.add(ni);
+        q.push(ni);
+      });
+    }
+    return seen;
+  }
+
+  function isSolved(){
+    return computeLit().has(goalIdx);
+  }
+
+  function fmtTime(sec){
+    const m = Math.floor(sec/60);
+    const s = sec % 60;
+    return m + ':' + String(s).padStart(2,'0');
+  }
+
+  function tickTimer(){
+    if(ended) return;
+    const sec = Math.floor((Date.now()-startTime)/1000);
+    statTimeEl.textContent = fmtTime(sec);
+  }
+
+  function loadBest(){
+    const v = localStorage.getItem(BEST_KEY);
+    statBestEl.textContent = v ? v + '회' : '-';
+    return v ? parseInt(v,10) : null;
+  }
+
+  function maybeSaveBest(moves){
+    const cur = localStorage.getItem(BEST_KEY);
+    if(cur === null || moves < parseInt(cur,10)){
+      localStorage.setItem(BEST_KEY, String(moves));
+      loadBest();
+      return true;
+    }
+    return false;
+  }
+
+  function onTap(i){
+    if(ended) return;
+    tiles[i] = rotate(tiles[i]);
+    movesUsed++;
+    statMovesEl.textContent = movesUsed;
+    paint();
+    if(isSolved()){
+      endGame();
+    }
+  }
+
+  function endGame(){
+    ended = true;
+    clearInterval(timerId);
+    const totalSec = Math.floor((Date.now()-startTime)/1000);
+
+    const newBest = maybeSaveBest(movesUsed);
+    resultSubEl.textContent = newBest ? '신기록이에요! 물길을 완성했어요.' : '수원에서 수도까지 이어졌어요.';
+    resMovesEl.textContent = movesUsed;
+    resTimeEl.textContent = fmtTime(totalSec);
+    rankLineEl.textContent = '';
+
+    setTimeout(() => overlayEl.classList.add('show'), 350);
+
+    if(window.MiniGameLeaderboard){
+      pendingSubmitStats = { moves: movesUsed, timeSec: totalSec };
+      if(!window.MiniGameLeaderboard.getPlayerName()){
+        setTimeout(() => nameOverlayEl.classList.add('show'), 600);
+      } else {
+        submitCurrentScore();
+      }
+    }
+  }
+
+  async function submitCurrentScore(){
+    if(!pendingSubmitStats || !window.MiniGameLeaderboard) return;
+    rankLineEl.textContent = '랭킹에 등록하는 중...';
+    try{
+      const res = await window.MiniGameLeaderboard.submitScore(GAME_ID, pendingSubmitStats);
+      rankLineEl.textContent = '전체 ' + res.rank + '위! (' + res.points + '점)';
+    }catch(e){
+      rankLineEl.textContent = '랭킹 등록에 실패했어요 (연결 확인 필요)';
+      console.error(e);
+    }
+    pendingSubmitStats = null;
+  }
+
+  nameSaveBtn.addEventListener('click', () => {
+    const name = window.MiniGameLeaderboard.setPlayerName(nameInputEl.value);
+    if(!name){ nameInputEl.focus(); return; }
+    nameOverlayEl.classList.remove('show');
+    submitCurrentScore();
+  });
+
+  async function openRanking(){
+    rankOverlayEl.classList.add('show');
+    rankListEl.innerHTML = '<div class="rank-loading">불러오는 중...</div>';
+    if(!window.MiniGameLeaderboard){
+      rankListEl.innerHTML = '<div class="rank-empty">랭킹 서버에 연결할 수 없어요.</div>';
+      return;
+    }
+    try{
+      const list = await window.MiniGameLeaderboard.fetchTopScores(GAME_ID, 10);
+      const myId = window.MiniGameLeaderboard.getPlayerId();
+      if(list.length === 0){
+        rankListEl.innerHTML = '<div class="rank-empty">아직 등록된 기록이 없어요. 첫 기록의 주인공이 되어보세요!</div>';
+        return;
+      }
+      rankListEl.innerHTML = '';
+      list.forEach((row, i) => {
+        const div = document.createElement('div');
+        div.className = 'rank-row' + (row.id === myId ? ' me' : '') + (i===0?' top1':i===1?' top2':i===2?' top3':'');
+        div.innerHTML = `<div class="pos">${i+1}</div><div class="rname">${escapeHtml(row.name || '익명')}</div><div class="rpts">${row.points}점</div>`;
+        rankListEl.appendChild(div);
+      });
+    }catch(e){
+      rankListEl.innerHTML = '<div class="rank-empty">랭킹을 불러오지 못했어요.</div>';
+      console.error(e);
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  rankOpenBtn.addEventListener('click', openRanking);
+  viewRankFromResultBtn.addEventListener('click', () => { overlayEl.classList.remove('show'); openRanking(); });
+  rankCloseBtn.addEventListener('click', () => rankOverlayEl.classList.remove('show'));
+
+  function newGame(){
+    ended = false;
+    movesUsed = 0;
+    statMovesEl.textContent = 0;
+
+    tiles = generateMaze();
+    const ends = pickEndpoints(tiles);
+    sourceIdx = ends.source;
+    goalIdx = ends.goal;
+
+    // 각 타일을 무작위로 회전시켜 섞기
+    for(let i=0;i<tiles.length;i++){
+      const turns = Math.floor(Math.random()*4);
+      for(let t=0;t<turns;t++) tiles[i] = rotate(tiles[i]);
+    }
+
+    // 시작부터 이미 풀려있으면 아무 타일이나 한 번 더 돌려서 어긋나게
+    if(isSolved()){
+      tiles[Math.floor(Math.random()*tiles.length)] = rotate(tiles[Math.floor(Math.random()*tiles.length)]);
+      if(isSolved()){
+        tiles[goalIdx] = rotate(tiles[goalIdx]);
+      }
+    }
+
+    paint();
+    overlayEl.classList.remove('show');
+
+    startTime = Date.now();
+    statTimeEl.textContent = '0:00';
+    clearInterval(timerId);
+    timerId = setInterval(tickTimer, 250);
+  }
+
+  retryBtn.addEventListener('click', newGame);
+  reshuffleBtn.addEventListener('click', newGame);
+
+  buildBoardDom();
+  loadBest();
+  newGame();
+})();
+</script>
+</body>
+</html>

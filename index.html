@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>미니게임 서랍 · 심심할 때 한 판</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#12141f">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="미니게임서랍">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#12141f;
+    --bg-2:#1a1e30;
+    --panel:#20243a;
+    --panel-2:#262b45;
+    --ink:#f2efe6;
+    --ink-dim:#9aa1c0;
+    --ink-faint:#5c6284;
+    --line:rgba(255,255,255,0.08);
+    --accent:#33c9a3;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    height:100svh;
+    background:
+      radial-gradient(circle at 15% 0%, #232849 0%, transparent 55%),
+      radial-gradient(circle at 85% 100%, #241f3d 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    touch-action:manipulation;
+  }
+
+  .page{
+    width:100%; max-width:520px;
+    height:100%;
+    display:flex; flex-direction:column;
+    padding:14px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  /* -------- ad slot -------- */
+  .ad-slot{
+    width:100%; max-width:320px; margin:0 auto 10px;
+    min-height:50px;
+    display:flex; align-items:center; justify-content:center;
+    background:repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 10px, rgba(255,255,255,0.015) 10px 20px);
+    border:1px dashed rgba(255,255,255,0.18);
+    border-radius:10px;
+    color:var(--ink-dim);
+    font-size:11px;
+    flex-shrink:0;
+  }
+
+  /* -------- header -------- */
+  header{ flex-shrink:0; margin-bottom:14px; }
+  .title{
+    font-family:'Baloo 2', system-ui, sans-serif;
+    font-weight:800;
+    font-size:24px;
+    letter-spacing:-0.01em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .title .dot{
+    width:13px;height:13px;border-radius:40% 60% 55% 45%/50% 45% 55% 50%;
+    background:linear-gradient(135deg,#ff6b5b,#8b7bf7);
+    display:inline-block;
+  }
+  .subtitle{
+    color:var(--ink-dim);
+    font-size:12.5px;
+    margin-top:4px;
+  }
+  .count-pill{
+    display:inline-flex; align-items:center; gap:5px;
+    margin-top:10px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:5px 12px;
+    font-size:11.5px;
+    color:var(--ink-dim);
+  }
+  .count-pill b{ color:var(--ink); font-family:'Baloo 2',sans-serif; }
+
+  /* -------- scrollable grid -------- */
+  .grid-scroll{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:6px;
+    mask-image:linear-gradient(180deg, black 92%, transparent 100%);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:12px;
+  }
+  @media (min-width:420px){
+    .grid{ grid-template-columns:repeat(4, 1fr); }
+  }
+
+  .tile{
+    display:flex; flex-direction:column; align-items:center;
+    gap:8px;
+    text-decoration:none;
+    color:inherit;
+  }
+  .icon{
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:26% 74% 68% 32%/38% 32% 68% 62%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px;
+    box-shadow:0 10px 20px -10px rgba(0,0,0,0.6), inset 0 -3px 8px rgba(0,0,0,0.15);
+    transition:transform .15s ease;
+    position:relative;
+  }
+  .tile:active .icon{ transform:scale(0.92); }
+  .tile .label{
+    font-size:11.5px;
+    font-weight:600;
+    text-align:center;
+    line-height:1.25;
+    color:var(--ink);
+  }
+  .tile .time{
+    font-size:9.5px;
+    color:var(--ink-dim);
+  }
+
+  /* empty / coming-soon placeholder tile */
+  .tile.empty{ pointer-events:none; }
+  .tile.empty .icon{
+    background:transparent;
+    border:1.5px dashed rgba(255,255,255,0.14);
+    box-shadow:none;
+    color:rgba(255,255,255,0.16);
+    font-size:20px;
+  }
+  .tile.empty .label{ color:var(--ink-faint); }
+  .tile.empty .time{ color:transparent; }
+
+  footer{
+    flex-shrink:0;
+    text-align:center;
+    color:var(--ink-faint);
+    font-size:10.5px;
+    padding-top:10px;
+  }
+
+  .header-row{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+  }
+  .rank-btn{
+    flex-shrink:0;
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    padding:7px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:2px;
+  }
+  .rank-btn:active{ transform:scale(0.96); }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(10,11,20,0.72);
+    backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:50;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .modal{
+    width:100%; max-width:380px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:22px 20px 18px;
+    text-align:center;
+    transform:translateY(12px) scale(0.98);
+    transition:transform .25s ease;
+    max-height:80vh;
+    overflow-y:auto;
+  }
+  .overlay.show .modal{ transform:translateY(0) scale(1); }
+  .modal .big{
+    font-family:'Baloo 2',sans-serif;
+    font-weight:800;
+    font-size:24px;
+    margin-bottom:4px;
+  }
+  .modal .sub{ color:var(--ink-dim); font-size:12.5px; margin-bottom:14px;}
+  .btn{
+    margin-top:16px;
+    width:100%;
+    border:none;
+    border-radius:14px;
+    padding:13px;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:#0d1420;
+    background:linear-gradient(135deg,var(--accent),#7be0c6);
+    cursor:pointer;
+  }
+  .btn:active{ transform:scale(0.97); }
+
+  .rank-list{
+    text-align:left;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .rank-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:9px 10px;
+  }
+  .rank-row .pos{
+    font-family:'Baloo 2',sans-serif; font-weight:700;
+    width:22px; text-align:center; color:var(--ink-dim); flex-shrink:0;
+  }
+  .rank-row.top1 .pos{ color:#ffd76a; }
+  .rank-row.top2 .pos{ color:#d9dbe6; }
+  .rank-row.top3 .pos{ color:#e0a672; }
+  .rank-row .rinfo{ flex:1; min-width:0; }
+  .rank-row .rname{ font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rank-row .rbreak{ font-size:10px; color:var(--ink-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-row .rpts{ font-family:'Baloo 2',sans-serif; font-weight:800; font-size:14px; color:var(--accent); flex-shrink:0; }
+  .rank-empty, .rank-loading{ color:var(--ink-dim); font-size:12.5px; padding:14px 0; }
+
+  .step-row{
+    display:flex; align-items:flex-start; gap:10px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; text-align:left;
+  }
+  .step-row .num{
+    font-family:'Baloo 2',sans-serif; font-weight:800;
+    color:var(--accent); flex-shrink:0; width:18px;
+  }
+  .step-row .txt{ font-size:13px; line-height:1.5; color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ 광고 영역 (허브 상단 배너) ============ -->
+  <!-- 실제 서비스 시 이 div 내부를 Google AdSense 등의 광고 스크립트로 교체하세요. -->
+  <div class="ad-slot">광고 영역 (320×50)</div>
+
+  <header>
+    <div class="header-row">
+      <div class="title"><span class="dot"></span>미니게임 서랍</div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="rank-btn" id="installBtn" style="display:none;">📲 홈화면바로가기</button>
+        <button class="rank-btn" id="overallRankBtn">🏆 전체 랭킹</button>
+      </div>
+    </div>
+    <div class="subtitle">심심할 때 꺼내서 한 판, 부담 없이.</div>
+    <div class="count-pill" id="countPill">게임 <b id="countNum">0</b>개 등록됨</div>
+  </header>
+
+  <div class="grid-scroll">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer>새 게임이 계속 추가될 예정이에요</footer>
+</div>
+
+<!-- 홈 화면 추가 안내 모달 (iOS 등 자동 설치가 안 되는 경우) -->
+<div class="overlay" id="installOverlay">
+  <div class="modal">
+    <div class="big">📲 홈 화면에 추가</div>
+    <div class="sub" id="installSub">앱처럼 아이콘을 눌러 바로 실행할 수 있어요</div>
+    <div class="rank-list" id="installSteps"></div>
+    <button class="btn" id="installCloseBtn">확인</button>
+  </div>
+</div>
+
+<!-- 전체 게임 합산 랭킹 모달 -->
+<div class="overlay" id="rankOverlay">
+  <div class="modal">
+    <div class="big">🏆 전체 합산 랭킹</div>
+    <div class="sub">등록된 모든 게임의 최고 점수를 합산한 순위예요</div>
+    <div class="rank-list" id="rankList"><div class="rank-loading">불러오는 중...</div></div>
+    <button class="btn" id="rankCloseBtn">닫기</button>
+  </div>
+</div>
+
+<!-- Firebase (전체 방문자 공유 랭킹) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="./shared/firebase-config.js"></script>
+<script src="./shared/leaderboard.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     게임을 새로 배포할 때는 이 배열에 한 줄만 추가하면 됩니다.
+     href 는 게임 폴더 경로 (예: 'color-flood/' 또는 'word-puzzle/')
+     colors 는 아이콘 그라데이션에 쓰일 두 가지 색상
+  ============================================================ */
+  const GAMES = [
+    {
+      id: 'color-flood',
+      title: '컬러 플러드',
+      time: '1~3분',
+      href: 'color-flood/',
+      emoji: '🎨',
+      colors: ['#ff6b5b', '#8b7bf7']
+    },
+    {
+      id: 'lights-out',
+      title: '라이트 아웃',
+      time: '1~3분',
+      href: 'lights-out/',
+      emoji: '💡',
+      colors: ['#ffc65c', '#ff8a5c']
+    },
+    {
+      id: 'slide-puzzle',
+      title: '슬라이드 퍼즐',
+      time: '1~3분',
+      href: 'slide-puzzle/',
+      emoji: '🔢',
+      colors: ['#5ec8f2', '#8b7bf7']
+    },
+    {
+      id: 'pipe-connect',
+      title: '파이프 커넥트',
+      time: '1~3분',
+      href: 'pipe-connect/',
+      emoji: '🚰',
+      colors: ['#3fd0c9', '#4a9ee8']
+    },
+    {
+      id: 'bullet-storm',
+      title: '섀도우 룬',
+      time: '1~3분',
+      href: 'bullet-storm/',
+      emoji: '🥷',
+      colors: ['#ffb43d', '#b45cff']
+    }
+    // 다음 게임 예시:
+    // {
+    //   id: 'word-puzzle',
+    //   title: '단어 퍼즐',
+    //   time: '2~3분',
+    //   href: 'word-puzzle/',
+    //   emoji: '🔤',
+    //   colors: ['#33c9a3', '#f4b740']
+    // },
+  ];
+
+  const MIN_SLOTS = 8; // 게임이 적을 때 최소 이만큼은 빈 아이콘으로 채워서 보여줌
+
+  const gridEl = document.getElementById('grid');
+  const countNumEl = document.getElementById('countNum');
+
+  countNumEl.textContent = GAMES.length;
+
+  function renderGameTile(game){
+    const a = document.createElement('a');
+    a.className = 'tile';
+    a.href = game.href;
+
+    const icon = document.createElement('div');
+    icon.className = 'icon';
+    icon.style.background = `radial-gradient(circle at 32% 26%, rgba(255,255,255,0.35), transparent 55%), linear-gradient(135deg, ${game.colors[0]}, ${game.colors[1]})`;
+    icon.textContent = game.emoji || '🎮';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = game.title;
+
+    const time = document.createElement('div');
+    time.className = 'time';
+    time.textContent = game.time || '';
+
+    a.appendChild(icon);
+    a.appendChild(label);
+    a.appendChild(time);
+    return a;
+  }
+
+  function renderEmptyTile(){
+    const d = document.createElement('div');
+    d.className = 'tile empty';
+
+    const icon = document.createElement('div');
+    icon.className = 'icon';
+    icon.textContent = '+';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = '준비중';
+
+    const time = document.createElement('div');
+    time.className = 'time';
+    time.textContent = '-';
+
+    d.appendChild(icon);
+    d.appendChild(label);
+    d.appendChild(time);
+    return d;
+  }
+
+  function render(){
+    gridEl.innerHTML = '';
+    GAMES.forEach(g => gridEl.appendChild(renderGameTile(g)));
+
+    const remain = Math.max(0, MIN_SLOTS - GAMES.length);
+    for(let i=0;i<remain;i++){
+      gridEl.appendChild(renderEmptyTile());
+    }
+  }
+
+  render();
+
+  // -------- 전체 게임 합산 랭킹 --------
+  const overallRankBtn = document.getElementById('overallRankBtn');
+  const rankOverlayEl = document.getElementById('rankOverlay');
+  const rankListEl = document.getElementById('rankList');
+  const rankCloseBtn = document.getElementById('rankCloseBtn');
+
+  const gameTitleMap = {};
+  GAMES.forEach(g => { gameTitleMap[g.id] = g.title; });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function openOverallRanking(){
+    rankOverlayEl.classList.add('show');
+    rankListEl.innerHTML = '<div class="rank-loading">불러오는 중...</div>';
+    if(!window.MiniGameLeaderboard){
+      rankListEl.innerHTML = '<div class="rank-empty">랭킹 서버에 연결할 수 없어요.</div>';
+      return;
+    }
+    try{
+      const list = await window.MiniGameLeaderboard.fetchOverallTop(10);
+      if(list.length === 0){
+        rankListEl.innerHTML = '<div class="rank-empty">아직 등록된 기록이 없어요. 게임을 플레이해서 첫 기록을 남겨보세요!</div>';
+        return;
+      }
+      rankListEl.innerHTML = '';
+      list.forEach((row, i) => {
+        const perGame = row.perGame || {};
+        const breakdown = Object.keys(perGame)
+          .map(id => (gameTitleMap[id] || id) + ' ' + perGame[id])
+          .join(' · ');
+        const div = document.createElement('div');
+        div.className = 'rank-row' + (i===0?' top1':i===1?' top2':i===2?' top3':'');
+        div.innerHTML = `<div class="pos">${i+1}</div>
+          <div class="rinfo">
+            <div class="rname">${escapeHtml(row.name || '익명')}</div>
+            <div class="rbreak">${escapeHtml(breakdown)}</div>
+          </div>
+          <div class="rpts">${row.totalPoints}점</div>`;
+        rankListEl.appendChild(div);
+      });
+    }catch(e){
+      rankListEl.innerHTML = '<div class="rank-empty">랭킹을 불러오지 못했어요.</div>';
+      console.error(e);
+    }
+  }
+
+  overallRankBtn.addEventListener('click', openOverallRanking);
+  rankCloseBtn.addEventListener('click', () => rankOverlayEl.classList.remove('show'));
+
+  // -------- 홈 화면에 추가 (PWA 설치) --------
+  const installBtn = document.getElementById('installBtn');
+  const installOverlayEl = document.getElementById('installOverlay');
+  const installSubEl = document.getElementById('installSub');
+  const installStepsEl = document.getElementById('installSteps');
+  const installCloseBtn = document.getElementById('installCloseBtn');
+
+  let deferredPrompt = null;
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+  }
+
+  const ua = window.navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isAndroid = /Android/.test(ua);
+
+  function showInstallSteps(stepsArr){
+    installStepsEl.innerHTML = '';
+    stepsArr.forEach((txt, i) => {
+      const row = document.createElement('div');
+      row.className = 'step-row';
+      row.innerHTML = `<div class="num">${i+1}</div><div class="txt">${txt}</div>`;
+      installStepsEl.appendChild(row);
+    });
+  }
+
+  function openInstallModal(){
+    installOverlayEl.classList.add('show');
+    if(isIOS){
+      installSubEl.textContent = 'Safari 브라우저의 공유 메뉴에서 추가할 수 있어요';
+      showInstallSteps([
+        '화면 아래쪽(또는 위쪽) 공유 아이콘 <b>⬆️</b>을 누르세요',
+        '메뉴를 아래로 내려서 <b>"홈 화면에 추가"</b>를 누르세요',
+        '오른쪽 위 <b>"추가"</b>를 누르면 완료! 홈 화면에서 앱처럼 실행할 수 있어요'
+      ]);
+    } else {
+      installSubEl.textContent = '이 브라우저에서는 아래 메뉴를 이용해주세요';
+      showInstallSteps([
+        '브라우저 오른쪽 위 <b>⋮</b>(더보기) 메뉴를 누르세요',
+        '<b>"홈 화면에 추가"</b> 또는 <b>"앱 설치"</b> 항목을 누르세요',
+        '완료되면 홈 화면 아이콘으로 바로 실행할 수 있어요'
+      ]);
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if(!isStandalone()) installBtn.style.display = 'flex';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt = null;
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    } else {
+      openInstallModal();
+    }
+  });
+
+  installCloseBtn.addEventListener('click', () => installOverlayEl.classList.remove('show'));
+
+  // beforeinstallprompt가 없는 환경(iOS 등)에서도 버튼을 보여줌
+  if(!isStandalone() && (isIOS || isAndroid)){
+    installBtn.style.display = 'flex';
+  }
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./service-worker.js').catch(function(e){
+      console.warn('[pwa] 서비스 워커 등록 실패', e);
+    });
+  }
+})();
+</script>
+</body>
+</html>

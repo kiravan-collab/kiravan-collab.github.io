@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스프라이트 시트 확인 도구</title>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:20px;
+    background:#12101c; color:#eee6ff;
+    font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  h1{ font-size:19px; margin:0; }
+  .sub{ color:#9b8ac0; font-size:13px; text-align:center; line-height:1.6; margin:0; }
+  .panel{
+    width:100%; max-width:760px;
+    background:#1c1730; border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; padding:16px;
+  }
+  #drop{
+    border:2px dashed rgba(255,255,255,0.22); border-radius:12px;
+    padding:34px 20px; text-align:center; color:#9b8ac0; cursor:pointer;
+    transition:background .2s, border-color .2s;
+  }
+  #drop.over{ background:rgba(255,180,61,0.12); border-color:#ffb43d; color:#ffb43d; }
+  .row{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-top:14px; }
+  label{ display:flex; flex-direction:column; gap:5px; font-size:11px; color:#9b8ac0; }
+  input[type=number]{
+    width:84px; padding:8px 10px; border-radius:8px;
+    border:1px solid rgba(255,255,255,0.14);
+    background:#12101c; color:#eee6ff; font-size:14px;
+  }
+  canvas{
+    image-rendering:pixelated;
+    background:
+      repeating-conic-gradient(#2a2440 0% 25%, #221d36 0% 50%) 50%/16px 16px;
+    border-radius:8px; max-width:100%;
+  }
+  .flex{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
+  .cap{ font-size:11px; color:#9b8ac0; margin:0 0 6px; }
+  code{
+    display:block; white-space:pre; background:#12101c;
+    border:1px solid rgba(255,255,255,0.12); border-radius:8px;
+    padding:12px; font-size:12px; color:#8fe9c0; overflow-x:auto; margin-top:6px;
+  }
+  .info{ font-size:12.5px; color:#c9bce8; line-height:1.7; }
+  .info b{ color:#ffb43d; }
+  button{
+    padding:9px 15px; border-radius:9px; border:none; cursor:pointer;
+    background:linear-gradient(135deg,#ffb43d,#b45cff); color:#231000;
+    font-weight:700; font-size:13px;
+  }
+  button:active{ transform:scale(0.97); }
+</style>
+</head>
+<body>
+
+<h1>🔍 스프라이트 시트 확인 도구</h1>
+<p class="sub">PNG를 끌어다 놓으면 격자를 나눠서 보여줍니다.<br>원하는 동작이 몇 번째 행인지 확인하고, 아래 설정값을 게임에 복사하세요.</p>
+
+<div class="panel">
+  <div id="drop">여기에 PNG 파일을 끌어다 놓거나 클릭해서 선택하세요</div>
+  <input type="file" id="file" accept="image/png,image/*" style="display:none;">
+
+  <div class="row">
+    <label>프레임 가로(fw)<input type="number" id="fw" value="16" min="1"></label>
+    <label>프레임 세로(fh)<input type="number" id="fh" value="16" min="1"></label>
+    <label>사용할 행(row)<input type="number" id="row" value="0" min="0"></label>
+    <label>시작 열(col0)<input type="number" id="col0" value="0" min="0"></label>
+    <label>프레임 수<input type="number" id="frames" value="4" min="1"></label>
+    <label>속도(fps)<input type="number" id="fps" value="7" min="1"></label>
+  </div>
+
+  <p class="info" id="imgInfo" style="margin-top:12px;"></p>
+</div>
+
+<div class="panel">
+  <div class="flex">
+    <div>
+      <p class="cap">전체 시트 (격자 + 행 번호)</p>
+      <canvas id="sheet"></canvas>
+    </div>
+    <div>
+      <p class="cap">애니메이션 미리보기</p>
+      <canvas id="preview" width="128" height="128"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <p class="cap">게임 코드에 붙여넣을 설정 (index.html 안의 <b>ASSET_SHEET</b>)</p>
+  <code id="out">파일을 먼저 올려주세요.</code>
+  <button id="copyBtn" style="margin-top:10px;">설정 복사하기</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const sheetC = document.getElementById('sheet');
+  const sctx = sheetC.getContext('2d');
+  const prevC = document.getElementById('preview');
+  const pctx = prevC.getContext('2d');
+  const out = document.getElementById('out');
+  const imgInfo = document.getElementById('imgInfo');
+  const copyBtn = document.getElementById('copyBtn');
+
+  const inputs = ['fw','fh','row','col0','frames','fps'].map(function(id){
+    return document.getElementById(id);
+  });
+
+  let img = null;
+  sctx.imageSmoothingEnabled = false;
+  pctx.imageSmoothingEnabled = false;
+
+  function val(id){ return Math.max(1, parseInt(document.getElementById(id).value,10) || 1); }
+  function val0(id){ return Math.max(0, parseInt(document.getElementById(id).value,10) || 0); }
+
+  drop.addEventListener('click', function(){ fileInput.click(); });
+  drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+  drop.addEventListener('drop', function(e){
+    e.preventDefault(); drop.classList.remove('over');
+    if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files[0]) load(fileInput.files[0]);
+  });
+
+  function load(file){
+    const r = new FileReader();
+    r.onload = function(){
+      const im = new Image();
+      im.onload = function(){
+        img = im;
+        drop.textContent = file.name + ' — 불러왔습니다';
+        autoGuess();
+        render();
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  }
+
+  // 흔한 프레임 크기로 나누어떨어지는지 보고 추측
+  function autoGuess(){
+    const cands = [16, 32, 48, 64, 24, 8];
+    for(let i=0;i<cands.length;i++){
+      const c = cands[i];
+      if(img.width % c === 0 && img.height % c === 0 && img.width/c >= 1){
+        document.getElementById('fw').value = c;
+        document.getElementById('fh').value = c;
+        document.getElementById('frames').value = Math.min(img.width/c, 8);
+        break;
+      }
+    }
+  }
+
+  function render(){
+    if(!img) return;
+    const fw = val('fw'), fh = val('fh');
+    const cols = Math.floor(img.width/fw), rows = Math.floor(img.height/fh);
+    const scale = Math.max(1, Math.min(6, Math.floor(560/img.width) || 1));
+
+    sheetC.width = img.width*scale;
+    sheetC.height = img.height*scale;
+    sctx.imageSmoothingEnabled = false;
+    sctx.clearRect(0,0,sheetC.width,sheetC.height);
+    sctx.drawImage(img, 0,0, sheetC.width, sheetC.height);
+
+    // 격자
+    sctx.strokeStyle = 'rgba(255,180,61,0.55)';
+    sctx.lineWidth = 1;
+    for(let c=0;c<=cols;c++){
+      sctx.beginPath();
+      sctx.moveTo(c*fw*scale+0.5, 0); sctx.lineTo(c*fw*scale+0.5, rows*fh*scale);
+      sctx.stroke();
+    }
+    for(let r=0;r<=rows;r++){
+      sctx.beginPath();
+      sctx.moveTo(0, r*fh*scale+0.5); sctx.lineTo(cols*fw*scale, r*fh*scale+0.5);
+      sctx.stroke();
+    }
+    // 선택된 행 강조
+    const selRow = val0('row');
+    if(selRow < rows){
+      sctx.strokeStyle = '#5ce1ff';
+      sctx.lineWidth = 2;
+      sctx.strokeRect(val0('col0')*fw*scale, selRow*fh*scale,
+                      Math.min(val('frames'), cols)*fw*scale, fh*scale);
+    }
+    // 행 번호
+    sctx.font = 'bold 11px monospace';
+    for(let r=0;r<rows;r++){
+      sctx.fillStyle = 'rgba(0,0,0,0.65)';
+      sctx.fillRect(2, r*fh*scale+2, 16, 13);
+      sctx.fillStyle = '#ffb43d';
+      sctx.fillText(String(r), 6, r*fh*scale+12);
+    }
+
+    imgInfo.innerHTML = '이미지 크기 <b>'+img.width+' × '+img.height+'</b> · '
+      + '격자 <b>'+cols+'열 × '+rows+'행</b> (프레임 '+fw+'×'+fh+' 기준)'
+      + (img.width % fw || img.height % fh ? ' <span style="color:#ff6b8a">⚠ 딱 나누어떨어지지 않아요. 프레임 크기를 바꿔보세요.</span>' : '');
+
+    updateOut();
+  }
+
+  function updateOut(){
+    out.textContent =
+      "키이름: { fw:"+val('fw')+", fh:"+val('fh')+", row:"+val0('row')
+      +", col0:"+val0('col0')+", frames:"+val('frames')+", fps:"+val('fps')+" }";
+  }
+
+  copyBtn.addEventListener('click', function(){
+    navigator.clipboard.writeText(out.textContent).then(function(){
+      copyBtn.textContent = '복사됨!';
+      setTimeout(function(){ copyBtn.textContent = '설정 복사하기'; }, 1200);
+    }).catch(function(){
+      copyBtn.textContent = '복사 실패 — 직접 선택하세요';
+    });
+  });
+
+  inputs.forEach(function(el){ el.addEventListener('input', render); });
+
+  // 미리보기 애니메이션
+  let t = 0, last = 0;
+  function loop(ts){
+    requestAnimationFrame(loop);
+    if(!last) last = ts;
+    const dt = (ts-last)/1000; last = ts;
+    t += dt;
+    if(!img) return;
+    const fw = val('fw'), fh = val('fh');
+    const n = val('frames'), fps = val('fps');
+    const f = Math.floor(t*fps) % n;
+    const sx = (val0('col0')+f)*fw, sy = val0('row')*fh;
+    pctx.imageSmoothingEnabled = false;
+    pctx.clearRect(0,0,prevC.width,prevC.height);
+    const s = Math.floor(Math.min(prevC.width/fw, prevC.height/fh));
+    const dw = fw*s, dh = fh*s;
+    pctx.drawImage(img, sx, sy, fw, fh,
+      Math.round((prevC.width-dw)/2), Math.round((prevC.height-dh)/2), dw, dh);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
