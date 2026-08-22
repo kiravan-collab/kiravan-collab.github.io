@@ -45,6 +45,12 @@
   function computePoints(gameId, stats) {
     const moves = Math.max(0, stats.moves || 0);
     const timeSec = Math.max(0, stats.timeSec || 0);
+
+    // 슈팅 게임류는 게임 내 점수가 곧 랭킹 점수 (높을수록 좋음)
+    if (gameId === 'bullet-storm') {
+      return Math.max(0, Math.min(50000, Math.round(stats.score || 0)));
+    }
+
     let raw;
     if (gameId === 'color-flood') {
       raw = 2000 - moves * 60 - timeSec * 4;
@@ -52,6 +58,8 @@
       raw = 2000 - moves * 50 - timeSec * 4;
     } else if (gameId === 'slide-puzzle') {
       raw = 2500 - moves * 20 - timeSec * 3;
+    } else if (gameId === 'pipe-connect') {
+      raw = 2500 - moves * 25 - timeSec * 3;
     } else {
       raw = 2000 - moves * 50 - timeSec * 4;
     }
