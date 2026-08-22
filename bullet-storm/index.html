@@ -460,6 +460,7 @@
     bullet_enemy: 'assets/bullet_enemy.png',
     item_rune:    'assets/item_rune.png',
     item_coin:    'assets/item_coin.png',
+    boss:         'assets/boss.png',
     tile_0:       'assets/tile_wasteland.png',
     tile_1:       'assets/tile_forest.png',
     tile_2:       'assets/tile_snow.png',
@@ -470,7 +471,7 @@
   // 화면에 그려질 목표 가로 크기(논리 픽셀). 이미지 비율은 유지됩니다.
   const ASSET_SIZE = {
     hero:34, enemy_bat:34, enemy_ghost:30, enemy_demon:42,
-    bullet_player:14, bullet_wave:26, bullet_enemy:14,
+    bullet_player:14, bullet_wave:26, bullet_enemy:14, boss:88,
     item_rune:24, item_coin:20
   };
 
@@ -481,6 +482,8 @@
   //  frames = 재생할 프레임 수
   //  fps    = 초당 프레임 수
   //  시트가 아닌 단일 이미지면 이 목록에서 빼면 됩니다.
+  //  주의: 파일이 1행짜리(예: 64x16)면 row는 반드시 0이어야 합니다.
+  //        범위를 벗어난 row/col은 코드가 자동으로 0으로 보정합니다.
   const ASSET_SHEET = {
     hero:        { fw:16, fh:16, row:0, col0:1, frames:2, fps:7 },
     enemy_bat:   { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
@@ -508,11 +511,16 @@
     const sh = ASSET_SHEET[key];
     let sx = 0, sy = 0, sw = im.width, sHgt = im.height;
     if(sh){
-      const n = sh.frames || 1;
-      const f = Math.floor((animTime !== undefined ? animTime : animT) * (sh.fps || 6)) % n;
       sw = sh.fw; sHgt = sh.fh;
-      sx = ((sh.col0 || 0) + f) * sh.fw;
-      sy = (sh.row || 0) * sh.fh;
+      // 시트 범위를 벗어나는 설정은 자동 보정 (안 보이는 사고 방지)
+      const maxCols = Math.max(1, Math.floor(im.width / sh.fw));
+      const maxRows = Math.max(1, Math.floor(im.height / sh.fh));
+      const row = Math.min(sh.row || 0, maxRows - 1);
+      const col0 = Math.min(sh.col0 || 0, maxCols - 1);
+      const n = Math.max(1, Math.min(sh.frames || 1, maxCols - col0));
+      const f = Math.floor((animTime !== undefined ? animTime : animT) * (sh.fps || 6)) % n;
+      sx = (col0 + f) * sh.fw;
+      sy = row * sh.fh;
     }
     const tw = ASSET_SIZE[key] || 32;
     const th = Math.round(tw * (sHgt / sw));
@@ -613,6 +621,7 @@
   let stageIdx = 0, prevStageIdx = 0, stageFade = 1, stageBanner = 0;
   let stageNum = 1;   // 1부터 계속 증가 (지역은 순환하지만 난이도/목표는 누적)
   let stageKills = 0, stageClearing = 0;
+  let boss = null, bossWarn = 0;
   let scrollY = 0, prevScrollY = 0;
 
   let baseScale = 1;
@@ -865,6 +874,185 @@
     ctx.textAlign = 'left';
   }
 
+  // =========================================================
+  //  스테이지 보스
+  // =========================================================
+  const BOSS_NAMES = ['황야의 파수꾼','숲의 마수','설산의 군주','용암의 폭군','심연의 지배자'];
+
+  function spawnBoss(){
+    // 보스 체력
+    //  * 일반몹 최강은 악마 8. 문자 그대로 3배(24)로 하면 1~3초 만에 죽어서
+    //    보스전이 성립하지 않아, 실제 교전이 되도록 상향했습니다.
+    //  * 그래도 3배로 하고 싶다면 아래 줄을 hp = 8*3 으로 바꾸세요.
+    const hp = 240 + (stageNum-1)*55;
+    boss = {
+      x:W/2, y:-60, r:34,
+      hp:hp, maxHp:hp,
+      t:0, hitFlash:0,
+      entering:true,
+      shootCd:1.8,
+      pattern:0,
+      phase2:false,
+      dead:false
+    };
+    bossWarn = 2.4;
+    enemyBullets = [];
+  }
+
+  function bossFire(){
+    const b = boss;
+    const d = difficulty();
+    const spd = 110 + d*70 + (b.phase2 ? 40 : 0);
+    const ang = Math.atan2(player.y-b.y, player.x-b.x);
+
+    if(b.pattern === 0){
+      // 원형 확산
+      const n = b.phase2 ? 20 : 14;
+      for(let i=0;i<n;i++){
+        const a = (i/n)*Math.PI*2 + b.t*0.6;
+        enemyBullets.push({x:b.x,y:b.y,vx:Math.cos(a)*spd*0.8,vy:Math.sin(a)*spd*0.8,r:5,t:0});
+      }
+    } else if(b.pattern === 1){
+      // 조준 산탄
+      const n = b.phase2 ? 9 : 7;
+      for(let i=0;i<n;i++){
+        const off = (i-(n-1)/2)*0.16;
+        enemyBullets.push({x:b.x,y:b.y,vx:Math.cos(ang+off)*spd,vy:Math.sin(ang+off)*spd,r:5,t:0});
+      }
+    } else {
+      // 나선탄
+      const arms = b.phase2 ? 4 : 3;
+      for(let k=0;k<arms;k++){
+        const a = b.t*3.4 + (k/arms)*Math.PI*2;
+        enemyBullets.push({x:b.x,y:b.y,vx:Math.cos(a)*spd*0.85,vy:Math.sin(a)*spd*0.85,r:5,t:0});
+      }
+    }
+  }
+
+  function updateBoss(dt){
+    const b = boss;
+    b.t += dt;
+    if(b.hitFlash > 0) b.hitFlash -= dt;
+
+    if(b.entering){
+      b.y += 62*dt;
+      if(b.y >= 78){ b.y = 78; b.entering = false; }
+      return;   // 등장 중엔 공격/피격 없음
+    }
+
+    // 좌우 이동 (2페이즈에서 더 빠르고 넓게)
+    const amp = b.phase2 ? 108 : 88;
+    const spd = b.phase2 ? 1.5 : 1.05;
+    b.x = W/2 + Math.sin(b.t*spd)*amp;
+    b.y = 78 + Math.sin(b.t*0.8)*14;
+
+    if(!b.phase2 && b.hp <= b.maxHp*0.5){
+      b.phase2 = true;
+      burst(b.x, b.y, '255,180,61', 30, 1.6);
+      popText('보스 격노!', '255,77,109');
+    }
+
+    b.shootCd -= dt;
+    if(b.shootCd <= 0){
+      b.shootCd = b.phase2 ? 0.85 : 1.35;
+      bossFire();
+      b.pattern = (b.pattern + 1) % 3;
+    }
+
+    // 내 탄과 충돌
+    for(let j=myBullets.length-1;j>=0;j--){
+      const bl = myBullets[j];
+      const dx = bl.x-b.x, dy = bl.y-b.y;
+      if(dx*dx+dy*dy < (b.r+bl.r)*(b.r+bl.r)){
+        if(!bl.wave) myBullets.splice(j,1);
+        b.hp -= (bl.dmg||1);
+        b.hitFlash = 0.08;
+        burst(bl.x, bl.y, '255,220,160', 3, 0.9);
+        if(b.hp <= 0){ killBoss(); return; }
+      }
+    }
+
+    // 몸통 충돌
+    if(grace<=0 && alive){
+      const dx = b.x-player.x, dy = b.y-player.y;
+      if(dx*dx+dy*dy < (b.r*0.7+player.r)*(b.r*0.7+player.r)){ killPlayer(); }
+    }
+  }
+
+  function killBoss(){
+    const b = boss;
+    for(let i=0;i<5;i++){
+      setTimeout((function(bx,by){ return function(){
+        burst(bx + (Math.random()-0.5)*50, by + (Math.random()-0.5)*50, '255,180,61', 22, 1.7);
+      };})(b.x, b.y), i*90);
+    }
+    shake = 1.2;
+    kills++;
+    score += 800 + stageNum*120;
+    // 보상: 룬 2개 + 금화 3개
+    for(let i=0;i<2;i++) items.push({x:b.x-20+i*40, y:b.y, vy:50, r:11, t:0, kind:'rune'});
+    for(let i=0;i<3;i++) items.push({x:b.x-40+i*40, y:b.y+16, vy:58, r:9, t:0, kind:'coin'});
+    boss = null;
+    enemyBullets = [];
+    advanceStage();
+  }
+
+  function drawBoss(){
+    const b = boss;
+    const flash = b.hitFlash > 0;
+
+    // 후광
+    const rg = ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,60);
+    rg.addColorStop(0, b.phase2 ? 'rgba(255,77,109,0.34)' : 'rgba(180,92,255,0.30)');
+    rg.addColorStop(1,'rgba(180,92,255,0)');
+    ctx.fillStyle = rg; ctx.fillRect(b.x-60,b.y-60,120,120);
+
+    const bob = Math.sin(b.t*2.6)*2;
+    if(!drawEntity('boss', null, b.x, b.y+bob, 4, null, flash, b.t)){
+      // 폴백: 내장 악마 도트를 크게
+      drawSprite(SPR.demon, b.x, b.y+bob, 4, flash ? P_WHITE : P_DEMON);
+    }
+
+    // 보스 체력바 (화면 상단 고정)
+    const bw = W-40, bx = 20, by = 26;
+    ctx.fillStyle = 'rgba(10,6,22,0.72)';
+    ctx.fillRect(bx-3, by-3, bw+6, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(bx, by, bw, 10);
+    const p = Math.max(0, b.hp/b.maxHp);
+    const hg = ctx.createLinearGradient(bx,0,bx+bw,0);
+    if(b.phase2){ hg.addColorStop(0,'#ff4d6d'); hg.addColorStop(1,'#ffb43d'); }
+    else { hg.addColorStop(0,'#b45cff'); hg.addColorStop(1,'#ff4d6d'); }
+    ctx.fillStyle = hg;
+    ctx.fillRect(bx, by, Math.round(bw*p), 10);
+    ctx.font = '700 9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffe9c0';
+    ctx.fillText(BOSS_NAMES[stageIdx] + '   ' + Math.max(0,Math.ceil(b.hp)) + ' / ' + b.maxHp, W/2, by+8.5);
+    ctx.textAlign = 'left';
+  }
+
+  function drawBossWarning(){
+    if(bossWarn <= 0) return;
+    const a = Math.min(1, bossWarn/0.4) * (Math.sin(bossWarn*14)*0.25 + 0.75);
+    ctx.globalAlpha = a*0.9;
+    ctx.fillStyle = '#3a0a18';
+    ctx.fillRect(0, H*0.42, W, 44);
+    ctx.fillStyle = '#ff4d6d';
+    ctx.fillRect(0, H*0.42, W, 2);
+    ctx.fillRect(0, H*0.42+42, W, 2);
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4d6d';
+    ctx.font = '800 13px Inter, sans-serif';
+    ctx.fillText('⚠  W A R N I N G  ⚠', W/2, H*0.42+18);
+    ctx.fillStyle = '#ffe9c0';
+    ctx.font = '800 15px Inter, sans-serif';
+    ctx.fillText(BOSS_NAMES[stageIdx] + ' 등장!', W/2, H*0.42+36);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+
   // ---------- 난이도 ----------
   function difficulty(){ return Math.min(1, ((stageNum-1)*0.20) + Math.min(0.35, elapsed/240)); }
   function overdrive(){ return Math.max(0, stageNum-5)*0.13; }
@@ -970,6 +1158,7 @@
     score += 500;
     popText('STAGE CLEAR +500', '255,180,61');
     enemyBullets = [];
+    boss = null; bossWarn = 0;
   }
 
   // ---------- 업데이트 ----------
@@ -990,12 +1179,23 @@
     fireCd -= dt;
     if(fireCd<=0){ fireCd = fireInterval(); firePattern(); }
 
+    if(bossWarn > 0) bossWarn -= dt;
+
     spawnCd -= dt;
     if(spawnCd<=0){
-      spawnCd = Math.max(0.22, 0.95-d*0.62-od*0.10)*(0.72+Math.random()*0.5);
-      spawnEnemy();
-      if(d>0.55 && Math.random()<0.32) spawnEnemy();
+      if(boss){
+        // 보스전 중에는 잡몹이 드물게만 등장
+        spawnCd = 2.2 + Math.random()*1.6;
+        if(!boss.entering && Math.random() < 0.6) spawnEnemy();
+      } else {
+        spawnCd = Math.max(0.22, 0.95-d*0.62-od*0.10)*(0.72+Math.random()*0.5);
+        spawnEnemy();
+        if(d>0.55 && Math.random()<0.32) spawnEnemy();
+      }
     }
+
+    if(boss) updateBoss(dt);
+    if(!alive) return;
 
     for(let i=myBullets.length-1;i>=0;i--){
       const b = myBullets[i];
@@ -1038,7 +1238,7 @@
             enemies.splice(i,1);
             kills++; stageKills++;
             score += e.type==='demon'?240:(e.type==='ghost'?115:70);
-            if(stageKills >= stageQuota(stageNum)) advanceStage();
+            if(stageKills >= stageQuota(stageNum) && !boss) spawnBoss();
             break;
           }
         }
@@ -1151,6 +1351,7 @@
     });
 
     enemies.forEach(drawEnemy);
+    if(boss) drawBoss();
 
     // 적 탄
     enemyBullets.forEach(function(b){
@@ -1182,8 +1383,9 @@
     });
     ctx.globalAlpha = 1; ctx.textAlign='left';
 
-    if(state===S.PLAY || state===S.PAUSE) drawProgress();
+    if((state===S.PLAY || state===S.PAUSE) && !boss) drawProgress();
     drawStageBanner();
+    drawBossWarning();
   }
 
   function drawHero(){
@@ -1284,6 +1486,7 @@
     fireCd=0; spawnCd=0.35;
     stageIdx=0; prevStageIdx=0; stageFade=1; stageBanner=2.6;
     stageNum=1; stageKills=0; scrollY=0; prevScrollY=0;
+    boss=null; bossWarn=0;
     player.x=W/2; player.y=H-72; dragging=false;
     renderPower();
     statScoreEl.textContent='0';
@@ -1299,7 +1502,7 @@
     if(state!==S.PLAY) return;
     state=S.PAUSE; dragging=false; pauseBtn.classList.remove('show');
     showVeil('⏸','일시정지',
-      '점수 <b style="color:#ffb43d">'+Math.floor(score)+'</b> · '+STAGES[stageIdx].name+' ('+stageKills+'/'+stageQuota(stageNum)+')',
+      '점수 <b style="color:#ffb43d">'+Math.floor(score)+'</b> · '+STAGES[stageIdx].name+(boss ? ' · <b style="color:#ff4d6d">보스전</b>' : ' ('+stageKills+'/'+stageQuota(stageNum)+')'),
       '', true);
   }
   function resumeGame(){
