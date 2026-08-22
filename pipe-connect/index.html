@@ -429,32 +429,16 @@
     return conn;
   }
 
-  // 트리에서 가장 먼 두 지점(대략)을 수원/수도로 지정
-  function pickEndpoints(conn){
-    function bfsFar(from){
-      const dist = new Array(SIZE*SIZE).fill(-1);
-      dist[from] = 0;
-      const q = [from];
-      let far = from;
-      while(q.length){
-        const cur = q.shift();
-        if(dist[cur] > dist[far]) far = cur;
-        const r = rowOf(cur), c = colOf(cur);
-        DIRS.forEach(d => {
-          if(!(conn[cur] & d.bit)) return;
-          const nr = r+d.dr, nc = c+d.dc;
-          if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) return;
-          const ni = idx(nr,nc);
-          if(dist[ni] !== -1) return;
-          dist[ni] = dist[cur]+1;
-          q.push(ni);
-        });
-      }
-      return far;
+  // 수원/수도는 보드 네 모서리 중 두 곳에서만 고정 등장
+  const CORNER_IDXS = [ idx(0,0), idx(0,SIZE-1), idx(SIZE-1,0), idx(SIZE-1,SIZE-1) ];
+
+  function pickEndpoints(){
+    const picks = CORNER_IDXS.slice();
+    for(let i=picks.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [picks[i],picks[j]] = [picks[j],picks[i]];
     }
-    const a = bfsFar(0);
-    const b = bfsFar(a);
-    return { source:a, goal:b };
+    return { source:picks[0], goal:picks[1] };
   }
 
   // 파이프 모양 SVG 생성
@@ -642,7 +626,7 @@
     statMovesEl.textContent = 0;
 
     tiles = generateMaze();
-    const ends = pickEndpoints(tiles);
+    const ends = pickEndpoints();
     sourceIdx = ends.source;
     goalIdx = ends.goal;
 
