@@ -272,7 +272,7 @@
 
   const GAME_ID = 'bullet-storm';
   const BEST_KEY = 'bulletstorm_best_score_v1';
-  const MAX_POWER = 5;
+  const MAX_POWER = 10;
   //  모바일 세로 화면에 맞춰 9:16에 가깝게. 위쪽 HUD_H 만큼은 HUD가 차지합니다.
   const W = 360, H = 680;
   const HUD_H = 38;
@@ -485,7 +485,7 @@
   // 화면에 그려질 목표 가로 크기(논리 픽셀). 이미지 비율은 유지됩니다.
   const ASSET_SIZE = {
     hero:34, enemy_bat:34, enemy_ghost:30, enemy_demon:42,
-    bullet_player:14, bullet_wave:26, bullet_enemy:14,
+    bullet_player:14, bullet_wave:9, bullet_enemy:14,
     boss_0:92, boss_1:96, boss_2:100, boss_3:84, boss_4:104,
     item_rune:24, item_coin:20, item_shield:22, fx_shield:46
   };
@@ -945,7 +945,7 @@
     //  * 일반몹 최강은 악마 8. 문자 그대로 3배(24)로 하면 1~3초 만에 죽어서
     //    보스전이 성립하지 않아, 실제 교전이 되도록 상향했습니다.
     //  * 그래도 3배로 하고 싶다면 아래 줄을 hp = 8*3 으로 바꾸세요.
-    const hp = 240 + (stageNum-1)*55;
+    const hp = 420 + (stageNum-1)*160;
     boss = {
       x:W/2, y:-60, r:34,
       hp:hp, maxHp:hp,
@@ -1225,19 +1225,28 @@
 
   // ---------- 발사 ----------
   function firePattern(){
-    const y = player.y-14, shots = [];
-    // 파워 0 = 룬을 하나도 안 먹은 시작 상태. 룬 5개(=MAX_POWER)면 최종 단계.
-    if(power<=0){ shots.push({dx:-6,vx:0,vy:-470}); shots.push({dx:6,vx:0,vy:-470}); }
-    else if(power===1){ shots.push({dx:-8,vx:0,vy:-480}); shots.push({dx:0,vx:0,vy:-510}); shots.push({dx:8,vx:0,vy:-480}); }
-    else if(power===2){ shots.push({dx:-10,vx:-80,vy:-470}); shots.push({dx:-4,vx:0,vy:-510}); shots.push({dx:4,vx:0,vy:-510}); shots.push({dx:10,vx:80,vy:-470}); }
-    else if(power===3){ shots.push({dx:-12,vx:-145,vy:-450}); shots.push({dx:-6,vx:-60,vy:-490}); shots.push({dx:0,vx:0,vy:-540,wave:true}); shots.push({dx:6,vx:60,vy:-490}); shots.push({dx:12,vx:145,vy:-450}); }
-    else if(power===4){ shots.push({dx:-14,vx:-190,vy:-440}); shots.push({dx:-9,vx:-95,vy:-480}); shots.push({dx:-4,vx:0,vy:-550,wave:true}); shots.push({dx:4,vx:0,vy:-550,wave:true}); shots.push({dx:9,vx:95,vy:-480}); shots.push({dx:14,vx:190,vy:-440}); }
-    else { shots.push({dx:-16,vx:-235,vy:-430}); shots.push({dx:-11,vx:-120,vy:-470}); shots.push({dx:-6,vx:-40,vy:-560,wave:true}); shots.push({dx:0,vx:0,vy:-580,wave:true}); shots.push({dx:6,vx:40,vy:-560,wave:true}); shots.push({dx:11,vx:120,vy:-470}); shots.push({dx:16,vx:235,vy:-430}); }
+    const y = player.y - 14;
+    const waves = Math.floor(power / 3);          // 장풍(쿠나이)은 룬 3단계마다 1발
+    const norms = (power % 3) + waves + 1;        // 나머지는 수리검 (룬0 = 1발)
+    const shots = [];
+    for(let i=0;i<waves;i++){
+      const t = waves===1 ? 0 : (i/(waves-1))*2-1;   // -1 ~ 1
+      shots.push({ dx:t*11, vx:t*55, vy:-560, wave:true });
+    }
+    for(let i=0;i<norms;i++){
+      const t = norms===1 ? 0 : (i/(norms-1))*2-1;
+      shots.push({ dx:t*16, vx:t*160, vy:-480 });
+    }
     shots.forEach(function(s){
-      myBullets.push({x:player.x+s.dx,y:y,vx:s.vx,vy:s.vy,r:s.wave?7:4.5,dmg:s.wave?3:1,wave:!!s.wave,spin:Math.random()*6});
+      myBullets.push({ x:player.x+s.dx, y:y, vx:s.vx, vy:s.vy,
+                       r:s.wave?7:4.5, dmg:s.wave?2:1, wave:!!s.wave,
+                       spin:Math.random()*6 });
     });
   }
-  function fireInterval(){ return [0.15,0.14,0.13,0.12,0.105,0.095][Math.max(0,Math.min(power,MAX_POWER))]; }
+  //  볼리 피해는 (룬+1)로 커지고, 발사 간격은 조금씩 느려져
+  //  최종 화력이 시작 화력의 정확히 5배를 넘지 않습니다.
+  const FIRE_INTERVAL = [0.085,0.121,0.142,0.155,0.163,0.170,0.175,0.179,0.182,0.185,0.187];
+  function fireInterval(){ return FIRE_INTERVAL[Math.max(0, Math.min(power, MAX_POWER))]; }
 
   // ---------- 스테이지 전환 ----------
   function advanceStage(){
@@ -1517,22 +1526,24 @@
     ctx.fillStyle = '#9b8ac0';
     ctx.font = '700 7px Inter, sans-serif';
     ctx.fillText('RUNE', 6, 30);
+    const SEG_W = 8, SEG_GAP = 2, SEG_X = 30;
     for(let i=0;i<MAX_POWER;i++){
-      const bx = 30 + i*15, by = 25;
+      const bx = SEG_X + i*(SEG_W+SEG_GAP), by = 25;
       if(i < power){
-        ctx.fillStyle = i>=MAX_POWER-1 ? '#ffb43d' : '#b45cff';
-        ctx.fillRect(bx,by,12,5);
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(bx,by,12,1);
+        // 장풍(쿠나이)이 늘어나는 3·6·9단계 칸은 금색으로 강조
+        ctx.fillStyle = ((i+1) % 3 === 0) ? '#ffb43d' : '#b45cff';
+        ctx.fillRect(bx,by,SEG_W,5);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(bx,by,SEG_W,1);
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.12)';
-        ctx.fillRect(bx,by,12,5);
+        ctx.fillRect(bx,by,SEG_W,5);
       }
     }
     // 보호막 표시
     if(shield > 0){
       ctx.fillStyle = '#5ce1ff';
       ctx.font = '800 8px Inter, sans-serif';
-      ctx.fillText('◈ SHIELD', 30+MAX_POWER*15+8, 30);
+      ctx.fillText('◈', SEG_X + MAX_POWER*(SEG_W+SEG_GAP) + 4, 30);
     }
 
     // 오른쪽: 점수 / 스테이지 / 최고
