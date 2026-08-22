@@ -491,6 +491,13 @@
     enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:5 }
   };
 
+  // 배경 타일 확대 배율
+  //  타일이 작으면 가로로 너무 여러 번 반복되어 어지러워 보입니다.
+  //  화면 가로는 360px이므로, 예를 들어 64px 타일에 3을 주면 192px가 되어
+  //  가로 약 1.9회만 반복됩니다. 도트가 뭉개지지 않도록 정수를 쓰세요.
+  //  1 = 원본 크기, 2·3·4 = 확대
+  const TILE_SCALE = 3;
+
   const IMG = {};
   function loadAssets(){
     Object.keys(ASSET_FILES).forEach(function(key){
