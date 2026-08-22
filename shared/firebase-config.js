@@ -10,6 +10,5 @@ window.FIREBASE_CONFIG = {
   projectId: "minigame-drawer",
   storageBucket: "minigame-drawer.firebasestorage.app",
   messagingSenderId: "145324266208",
-  appId: "1:145324266208:web:131558a86fca57e43c3685",
-  measurementId: "G-X7PNLTKWQ8"
+  appId: "1:145324266208:web:131558a86fca57e43c3685"
 };
