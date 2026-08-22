@@ -5,11 +5,10 @@
 // 아래 따옴표 안에 그대로 붙여넣으세요. (모든 게임 페이지가 이 파일을 공유합니다)
 // ============================================================
 window.FIREBASE_CONFIG = {
- apiKey: "AIzaSyBsOgLJFF7RUzx4aBhxfmXwtaf6iXcFg4E",
+  apiKey: "AIzaSyBsOgLJFF7RUzx4aBhxfmXwtaf6iXcFg4E",
   authDomain: "minigame-drawer.firebaseapp.com",
   projectId: "minigame-drawer",
   storageBucket: "minigame-drawer.firebasestorage.app",
   messagingSenderId: "145324266208",
-  appId: "1:145324266208:web:131558a86fca57e43c3685",
-  measurementId: "G-X7PNLTKWQ8"
+  appId: "1:145324266208:web:131558a86fca57e43c3685"
 };
