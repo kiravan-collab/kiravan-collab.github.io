@@ -704,11 +704,13 @@
     // 타일 이미지가 있으면 그것으로 바닥을 채움 (에셋팩 적용 시)
     const tile = IMG['tile_'+si];
     if(tile){
-      const tw = tile.width, th = tile.height;
+      const s = Math.max(1, TILE_SCALE);
+      const tw = tile.width * s, th = tile.height * s;
       const offY = ((sy % th) + th) % th;
       for(let y = -offY; y < H; y += th){
         for(let x = 0; x < W; x += tw){
-          ctx.drawImage(tile, Math.round(x), Math.round(y), tw, th);
+          ctx.drawImage(tile, 0, 0, tile.width, tile.height,
+                        Math.round(x), Math.round(y), tw, th);
         }
       }
       ctx.fillStyle = st.tint;
