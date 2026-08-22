@@ -47,8 +47,10 @@
     const timeSec = Math.max(0, stats.timeSec || 0);
 
     // 슈팅 게임류는 게임 내 점수가 곧 랭킹 점수 (높을수록 좋음)
+    //  전체 합산 랭킹에서 다른 게임(대체로 100~2500점)을 압도하지 않도록
+    //  상한을 다른 게임과 비슷한 수준으로 둡니다.
     if (gameId === 'bullet-storm') {
-      return Math.max(0, Math.min(50000, Math.round(stats.score || 0)));
+      return Math.max(0, Math.min(3000, Math.round(stats.score || 0)));
     }
 
     let raw;

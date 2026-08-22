@@ -460,6 +460,8 @@
     bullet_enemy: 'assets/bullet_enemy.png',
     item_rune:    'assets/item_rune.png',
     item_coin:    'assets/item_coin.png',
+    item_shield:  'assets/item_shield.png',
+    fx_shield:    'assets/fx_shield.png',
     boss_0:       'assets/boss_0.png',
     boss_1:       'assets/boss_1.png',
     boss_2:       'assets/boss_2.png',
@@ -477,7 +479,7 @@
     hero:34, enemy_bat:34, enemy_ghost:30, enemy_demon:42,
     bullet_player:14, bullet_wave:26, bullet_enemy:14,
     boss_0:92, boss_1:96, boss_2:100, boss_3:84, boss_4:104,
-    item_rune:24, item_coin:20
+    item_rune:24, item_coin:20, item_shield:22, fx_shield:46
   };
 
   // 스프라이트 시트 설정
@@ -497,6 +499,7 @@
     enemy_ghost: { fw:16, fh:16, row:0, col0:0, frames:4, fps:6 },
     enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
     item_coin:   { fw:10, fh:10, row:0, col0:0, frames:4, fps:9 },
+    fx_shield:   { fw:24, fh:26, row:0, col0:0, frames:6, fps:10 },
     boss_0:      { fw:60, fh:60, row:0, col0:0, frames:6, fps:6 },
     boss_1:      { fw:62, fh:62, row:0, col0:0, frames:6, fps:6 },
     boss_2:      { fw:68, fh:68, row:0, col0:0, frames:6, fps:6 },
@@ -627,10 +630,13 @@
   // 점수는 오직 금화를 먹었을 때만 오릅니다.
   //  생존 시간 / 처치 / 보스 격파 / 스테이지 클리어는 점수를 주지 않고,
   //  대신 금화가 떨어지는 방식으로만 보상합니다.
-  const COIN_SCORE = 120;
+  //  배점은 다른 미니게임(대체로 100~2500점)과 합산 랭킹에서 비교되므로
+  //  한 판에 대략 1000~2500점이 나오도록 맞춰 두었습니다.
+  const COIN_SCORE = 15;
 
   let lastTs = 0, elapsed = 0, score = 0, kills = 0;
   let alive = true, grace = 0;
+  let shield = 0;              // 보호막: 피격 1회를 대신 막아줍니다
   let power = 1, maxPowerReached = 1;
   let shake = 0, pendingSubmitStats = null;
 
@@ -1003,7 +1009,7 @@
     // 몸통 충돌
     if(grace<=0 && alive){
       const dx = b.x-player.x, dy = b.y-player.y;
-      if(dx*dx+dy*dy < (b.r*0.7+player.r)*(b.r*0.7+player.r)){ killPlayer(); }
+      if(dx*dx+dy*dy < (b.r*0.7+player.r)*(b.r*0.7+player.r)){ hitPlayer(); }
     }
   }
 
@@ -1133,19 +1139,36 @@
 
   // ---------- 아이템 ----------
   function maybeDrop(e){
-    // 점수가 금화 전용이라 처치는 반드시 무언가를 떨어뜨립니다.
-    //  룬(파워업)이 나오지 않으면 적 등급만큼 금화가 나옵니다.
-    const runeChance = e.type==='demon' ? 0.60 : (e.type==='ghost' ? 0.24 : 0.10);
-    if(Math.random() < runeChance){
+    // 드랍 확률
+    //  룬  = 적 등급별 기본치의 1/2
+    //  금화 = 룬이 안 나왔을 때 1/2 확률 (예전엔 항상 나왔음)
+    //  보호막 = 룬 확률의 1/2
+    const runeChance   = (e.type==='demon' ? 0.60 : (e.type==='ghost' ? 0.24 : 0.10)) * 0.5;
+    const shieldChance = runeChance * 0.5;
+    const r = Math.random();
+
+    if(r < shieldChance){
+      items.push({x:e.x,y:e.y,vy:52,r:11,t:0,kind:'shield'});
+      return;
+    }
+    if(r < shieldChance + runeChance){
       items.push({x:e.x,y:e.y,vy:56,r:11,t:0,kind:'rune'});
       return;
     }
+    if(Math.random() >= 0.5) return;   // 금화도 1/2 확률로만
+
     const coins = e.type==='demon' ? 5 : (e.type==='ghost' ? 2 : 1);
     for(let i=0;i<coins;i++){
       items.push({x:e.x+(i-(coins-1)/2)*13, y:e.y, vy:64+i*5, r:9, t:0, kind:'coin'});
     }
   }
   function collectItem(it){
+    if(it.kind === 'shield'){
+      shield = 1;                       // 1회분만 유지 (중복 획득해도 1회)
+      popText('SHIELD!', '92,225,255');
+      burst(it.x,it.y,'92,225,255',20,1.5);
+      return;
+    }
     if(it.kind === 'rune'){
       if(power < MAX_POWER){
         power++; if(power>maxPowerReached) maxPowerReached = power;
@@ -1301,7 +1324,7 @@
       if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){ enemyBullets.splice(i,1); continue; }
       if(grace<=0 && alive){
         const dx=b.x-player.x, dy=b.y-player.y;
-        if(dx*dx+dy*dy < (b.r+player.r)*(b.r+player.r)){ killPlayer(); return; }
+        if(dx*dx+dy*dy < (b.r+player.r)*(b.r+player.r)){ enemyBullets.splice(i,1); hitPlayer(); return; }
       }
     }
 
@@ -1309,7 +1332,7 @@
       for(let i=enemies.length-1;i>=0;i--){
         const e = enemies[i];
         const dx=e.x-player.x, dy=e.y-player.y;
-        if(dx*dx+dy*dy < (e.r*0.66+player.r)*(e.r*0.66+player.r)){ killPlayer(); return; }
+        if(dx*dx+dy*dy < (e.r*0.66+player.r)*(e.r*0.66+player.r)){ hitPlayer(); return; }
       }
     }
 
@@ -1325,6 +1348,19 @@
     }
 
     statScoreEl.textContent = Math.floor(score);
+  }
+
+  // 피격 지점. 보호막이 있으면 1회 대신 막고, 없으면 사망.
+  function hitPlayer(){
+    if(shield > 0){
+      shield = 0;
+      grace = 1.4;                       // 깨진 직후 잠깐 무적
+      shake = 0.7;
+      burst(player.x,player.y,'92,225,255',30,1.6);
+      popText('SHIELD BREAK', '92,225,255');
+      return;
+    }
+    killPlayer();
   }
 
   function killPlayer(){
@@ -1348,12 +1384,19 @@
     // 아이템
     items.forEach(function(it){
       const pulse = 1+Math.sin(it.t*7)*0.10;
-      const col = it.kind==='rune' ? '255,180,61' : '255,210,87';
+      const col = it.kind==='rune' ? '255,180,61' : (it.kind==='shield' ? '92,225,255' : '255,210,87');
       const rg = ctx.createRadialGradient(it.x,it.y,0,it.x,it.y,26*pulse);
       rg.addColorStop(0,'rgba('+col+',0.45)'); rg.addColorStop(1,'rgba('+col+',0)');
       ctx.fillStyle = rg; ctx.fillRect(it.x-26,it.y-26,52,52);
       const bob = Math.sin(it.t*5)*2;
-      if(it.kind==='rune'){
+      if(it.kind==='shield'){
+        if(!drawEntity('item_shield', null, it.x, it.y+bob, 2, null, false)){
+          ctx.fillStyle = '#5ce1ff';
+          ctx.fillRect(Math.round(it.x)-6, Math.round(it.y+bob)-8, 12, 14);
+          ctx.fillStyle = '#e8fbff';
+          ctx.fillRect(Math.round(it.x)-3, Math.round(it.y+bob)-5, 6, 8);
+        }
+      } else if(it.kind==='rune'){
         if(!drawEntity('item_rune', null, it.x, it.y+bob, 2, null, false))
           drawSprite(SPR.rune, it.x, it.y+bob, 2, P_RUNE);
       } else {
@@ -1452,6 +1495,16 @@
     ctx.fillStyle = '#ff4d6d'; ctx.fillRect(hx-3,hy-3,6,6);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(hx-1,hy-1,2,2);
     ctx.globalAlpha = 1;
+
+    // 보호막이 남아 있으면 술사 둘레에 막을 두름
+    if(shield > 0){
+      ctx.globalAlpha = 0.55 + Math.sin(animT*7)*0.18;
+      if(!drawEntity('fx_shield', null, player.x, player.y+2, 2, null, false)){
+        ctx.strokeStyle = '#5ce1ff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(player.x, player.y+2, 19, 0, Math.PI*2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawEnemy(e){
@@ -1519,7 +1572,7 @@
   }
 
   function resetState(){
-    elapsed=0; score=0; kills=0; alive=true; grace=1.6;
+    elapsed=0; score=0; kills=0; alive=true; grace=1.6; shield=0;
     power=1; maxPowerReached=1; shake=0;
     myBullets=[]; enemies=[]; enemyBullets=[]; items=[]; particles=[]; popTexts=[]; trail=[];
     fireCd=0; spawnCd=0.35;
