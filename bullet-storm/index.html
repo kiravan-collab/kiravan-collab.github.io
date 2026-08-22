@@ -474,6 +474,20 @@
     item_rune:24, item_coin:20
   };
 
+  // 스프라이트 시트 설정
+  //  fw,fh  = 프레임 한 칸의 픽셀 크기 (Ninja Adventure는 16,16)
+  //  row    = 사용할 행 (0부터). 보통 0=아래보기, 1=위보기, 2=왼쪽, 3=오른쪽
+  //  col0   = 시작 열 (0부터)
+  //  frames = 재생할 프레임 수
+  //  fps    = 초당 프레임 수
+  //  시트가 아닌 단일 이미지면 이 목록에서 빼면 됩니다.
+  const ASSET_SHEET = {
+    hero:        { fw:16, fh:16, row:1, col0:0, frames:4, fps:7 },
+    enemy_bat:   { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
+    enemy_ghost: { fw:16, fh:16, row:0, col0:0, frames:4, fps:6 },
+    enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:5 }
+  };
+
   const IMG = {};
   function loadAssets(){
     Object.keys(ASSET_FILES).forEach(function(key){
@@ -484,28 +498,37 @@
     });
   }
 
-  // 이미지가 있으면 이미지로, 없으면 내장 도트로 그림
-  function drawEntity(key, fallbackSprite, cx, cy, px, pal, flash){
+  // 이미지가 있으면 이미지(필요시 시트 애니메이션)로, 없으면 내장 도트로 그림
+  function drawEntity(key, fallbackSprite, cx, cy, px, pal, flash, animTime){
     const im = IMG[key];
-    if(im){
-      const tw = ASSET_SIZE[key] || 32;
-      const th = Math.round(tw * (im.height/im.width));
-      const x = Math.round(cx - tw/2), y = Math.round(cy - th/2);
-      if(flash){
-        ctx.drawImage(im, x, y, tw, th);
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-atop';
-        ctx.globalAlpha = 0.85;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x, y, tw, th);
-        ctx.restore();
-      } else {
-        ctx.drawImage(im, x, y, tw, th);
-      }
-      return true;
+    if(!im){
+      if(fallbackSprite) drawSprite(fallbackSprite, cx, cy, px, pal);
+      return false;
     }
-    if(fallbackSprite) drawSprite(fallbackSprite, cx, cy, px, pal);
-    return false;
+    const sh = ASSET_SHEET[key];
+    let sx = 0, sy = 0, sw = im.width, sHgt = im.height;
+    if(sh){
+      const n = sh.frames || 1;
+      const f = Math.floor((animTime !== undefined ? animTime : animT) * (sh.fps || 6)) % n;
+      sw = sh.fw; sHgt = sh.fh;
+      sx = ((sh.col0 || 0) + f) * sh.fw;
+      sy = (sh.row || 0) * sh.fh;
+    }
+    const tw = ASSET_SIZE[key] || 32;
+    const th = Math.round(tw * (sHgt / sw));
+    const x = Math.round(cx - tw/2), y = Math.round(cy - th/2);
+
+    ctx.drawImage(im, sx, sy, sw, sHgt, x, y, tw, th);
+    if(flash){
+      // 같은 그림을 가산 합성으로 덧그려 스프라이트 픽셀만 하얗게 번쩍이게 함
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(im, sx, sy, sw, sHgt, x, y, tw, th);
+      ctx.drawImage(im, sx, sy, sw, sHgt, x, y, tw, th);
+      ctx.restore();
+    }
+    return true;
   }
 
   function drawSprite(sprite, cx, cy, px, pal){
@@ -1194,13 +1217,13 @@
     const flash = e.hitFlash>0;
     if(e.type==='bat'){
       const spr = (Math.floor(e.t*9)%2===0) ? SPR.bat : SPR.bat2;
-      if(!drawEntity('enemy_bat', null, e.x, e.y, PX, null, flash)){
+      if(!drawEntity('enemy_bat', null, e.x, e.y, PX, null, flash, e.t)){
         drawSprite(spr, e.x, e.y, PX, flash?P_WHITE:P_BAT);
       }
     } else if(e.type==='ghost'){
       const fl = Math.sin(e.t*4)*2;
       ctx.globalAlpha = 0.92;
-      if(!drawEntity('enemy_ghost', null, e.x, e.y+fl, PX, null, flash)){
+      if(!drawEntity('enemy_ghost', null, e.x, e.y+fl, PX, null, flash, e.t)){
         drawSprite(SPR.ghost, e.x, e.y+fl, PX, flash?P_WHITE:P_GHOST);
       }
       ctx.globalAlpha = 1;
@@ -1209,7 +1232,7 @@
       rg.addColorStop(0,'rgba(180,92,255,0.28)'); rg.addColorStop(1,'rgba(180,92,255,0)');
       ctx.fillStyle = rg; ctx.fillRect(e.x-34,e.y-34,68,68);
       const bob = Math.sin(e.t*3)*1.5;
-      if(!drawEntity('enemy_demon', null, e.x, e.y+bob, PX, null, flash)){
+      if(!drawEntity('enemy_demon', null, e.x, e.y+bob, PX, null, flash, e.t)){
         drawSprite(SPR.demon, e.x, e.y+bob, PX, flash?P_WHITE:P_DEMON);
       }
     }
