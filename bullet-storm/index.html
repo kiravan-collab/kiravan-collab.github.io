@@ -27,7 +27,13 @@
     padding:12px 12px calc(12px + env(safe-area-inset-bottom));
     overflow-x:hidden; -webkit-user-select:none; user-select:none; touch-action:none;
   }
-  .wrap{width:100%; max-width:440px; display:flex; flex-direction:column; gap:10px; align-items:center;}
+  /* 화면 세로를 끝까지 쓰도록: 고정 요소를 뺀 나머지를 게임 화면이 가져갑니다 */
+  .wrap{
+    width:100%; max-width:440px; display:flex; flex-direction:column; gap:10px;
+    align-items:center; flex:1; min-height:0;
+  }
+  /* 간격은 flex gap으로만 — 기본 마진이 붙으면 높이 계산이 어긋납니다 */
+  .wrap > *{ margin:0; }
   .ad-slot{
     width:100%; display:flex; align-items:center; justify-content:center;
     background:repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 10px, rgba(255,255,255,0.015) 10px 20px);
@@ -60,35 +66,19 @@
   }
   .rank-btn:active{ transform:scale(0.96); }
 
-  .hud{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .hud-left{ display:flex; flex-direction:column; gap:6px; }
-  .soul{ display:flex; align-items:center; gap:5px; font-size:10px; color:var(--ink-dim); letter-spacing:.06em; }
-  .soul .orb{
-    width:14px; height:14px; border-radius:50%;
-    background:radial-gradient(circle at 34% 30%, #fff, var(--hp) 60%, #7a1030);
-    box-shadow:0 0 9px rgba(255,77,109,0.85); animation:pulse 1.7s ease-in-out infinite;
-  }
-  @keyframes pulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.13)} }
-  .pw{ display:flex; align-items:center; gap:4px; }
-  .pw-lbl{ font-size:9px; color:var(--ink-dim); letter-spacing:.06em; }
-  .pw-bar{ display:flex; gap:3px; }
-  .pw-seg{ width:12px; height:5px; border-radius:1px; background:rgba(255,255,255,0.10); transition:background .25s, box-shadow .25s; }
-  .pw-seg.on{ background:linear-gradient(90deg,var(--accent),var(--violet)); box-shadow:0 0 7px rgba(255,180,61,0.8); }
-  .score-box{ display:flex; gap:7px; }
-  .stat{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:5px 9px; text-align:center; min-width:58px; }
-  .stat .num{ font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; line-height:1.1;}
-  .stat .lbl{ font-size:9px; color:var(--ink-dim); margin-top:1px;}
-
+  /* 점수·스테이지·최고점·룬 게이지는 캔버스 안에 직접 그립니다 (drawHUD) */
   .stage-card{
     width:100%; background:#07040f; border:1px solid var(--line); border-radius:16px;
     overflow:hidden; position:relative;
     box-shadow:0 20px 46px -18px rgba(0,0,0,0.85), 0 0 0 1px rgba(180,92,255,0.10);
     touch-action:none;
+    flex:0 0 auto;      /* 높이는 resize()가 캔버스 크기에 딱 맞춰 지정 */
+    display:flex; align-items:center; justify-content:center;
   }
-  #game{ width:100%; display:block; touch-action:none; image-rendering:pixelated; }
+  #game{ display:block; touch-action:none; image-rendering:pixelated; }
 
   .stage-pause{
-    position:absolute; top:9px; right:9px; width:34px; height:34px; border-radius:10px;
+    position:absolute; bottom:10px; right:10px; width:34px; height:34px; border-radius:10px;
     background:rgba(18,10,32,0.75); border:1px solid rgba(255,255,255,0.14);
     color:var(--ink); font-size:14px; display:flex; align-items:center; justify-content:center;
     cursor:pointer; z-index:3; backdrop-filter:blur(4px);
@@ -178,24 +168,6 @@
     <button class="rank-btn" id="rankOpenBtn">🏆 랭킹</button>
   </header>
 
-  <div class="hud">
-    <div class="hud-left">
-      <div class="soul"><span class="orb"></span>SOUL · 단 한 번의 목숨</div>
-      <div class="pw">
-        <span class="pw-lbl">RUNE</span>
-        <div class="pw-bar" id="pwBar">
-          <div class="pw-seg on"></div><div class="pw-seg"></div><div class="pw-seg"></div>
-          <div class="pw-seg"></div><div class="pw-seg"></div>
-        </div>
-      </div>
-    </div>
-    <div class="score-box">
-      <div class="stat"><div class="num" id="statScore">0</div><div class="lbl">점수</div></div>
-      <div class="stat"><div class="num" id="statStage">1</div><div class="lbl">스테이지</div></div>
-      <div class="stat"><div class="num" id="statBest">-</div><div class="lbl">최고</div></div>
-    </div>
-  </div>
-
   <div class="stage-card" id="stageCard">
     <canvas id="game"></canvas>
     <button class="stage-pause" id="pauseBtn" title="일시정지">❚❚</button>
@@ -225,7 +197,7 @@
     <div class="row">
       <div class="box"><div class="num" id="resKills">0</div><div class="lbl">처치</div></div>
       <div class="box"><div class="num" id="resStage">1</div><div class="lbl">도달 지역</div></div>
-      <div class="box"><div class="num" id="resPower">1</div><div class="lbl">최대 룬</div></div>
+      <div class="box"><div class="num" id="resPower">0</div><div class="lbl">모은 룬</div></div>
     </div>
     <div class="rank-line" id="rankLine"></div>
     <!-- ============ 광고 영역 (결과 화면) ============ -->
@@ -265,7 +237,9 @@
   const GAME_ID = 'bullet-storm';
   const BEST_KEY = 'bulletstorm_best_score_v1';
   const MAX_POWER = 5;
-  const W = 360, H = 480;
+  //  모바일 세로 화면에 맞춰 9:16에 가깝게. 위쪽 HUD_H 만큼은 HUD가 차지합니다.
+  const W = 360, H = 640;
+  const HUD_H = 38;
   const PX = 2;   // 도트 1칸 = 2 논리픽셀
 
   const canvas = document.getElementById('game');
@@ -280,10 +254,8 @@
   const resumeBtn = document.getElementById('resumeBtn');
   const quitBtn = document.getElementById('quitBtn');
   const pauseBtn = document.getElementById('pauseBtn');
-  const statScoreEl = document.getElementById('statScore');
-  const statStageEl = document.getElementById('statStage');
-  const statBestEl = document.getElementById('statBest');
-  const pwBarEl = document.getElementById('pwBar');
+  // 점수/스테이지/최고점/룬 게이지는 DOM이 아니라 캔버스에 그립니다 (drawHUD)
+  let bestScore = 0;
   const overlayEl = document.getElementById('overlay');
   const resultSubEl = document.getElementById('resultSub');
   const finalScoreEl = document.getElementById('finalScore');
@@ -637,7 +609,7 @@
   let lastTs = 0, elapsed = 0, score = 0, kills = 0;
   let alive = true, grace = 0;
   let shield = 0;              // 보호막: 피격 1회를 대신 막아줍니다
-  let power = 1, maxPowerReached = 1;
+  let power = 0, maxPowerReached = 0;   // 0 = 룬 미획득 상태
   let shake = 0, pendingSubmitStats = null;
 
   let player = { x:W/2, y:H-72, r:3.2 };
@@ -654,16 +626,33 @@
   let scrollY = 0, prevScrollY = 0;
 
   let baseScale = 1;
+  const wrapEl = document.querySelector('.wrap');
   function resize(){
-    const rect = stageCard.getBoundingClientRect();
-    const cssW = rect.width, cssH = cssW*(H/W);
+    // .wrap 안에서 게임 카드를 뺀 나머지 요소가 쓰는 높이를 재고,
+    // 남는 공간에 비율을 유지한 채 최대 크기로 채웁니다.
+    const wrapRect = wrapEl.getBoundingClientRect();
+    let used = 0, gaps = 0;
+    Array.prototype.forEach.call(wrapEl.children, function(ch){
+      if(ch === stageCard) return;
+      used += ch.getBoundingClientRect().height;
+      gaps++;
+    });
+    const availW = wrapRect.width;
+    const availH = Math.max(220, wrapRect.height - used - gaps*10);
+    const scale  = Math.min(availW/W, availH/H);
+    const cssW = Math.max(1, Math.floor(W*scale));
+    const cssH = Math.max(1, Math.floor(H*scale));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
     canvas.width = Math.round(cssW*dpr); canvas.height = Math.round(cssH*dpr);
+    stageCard.style.width = cssW+'px';       // 카드가 캔버스를 꽉 감싸도록
+    stageCard.style.height = cssH+'px';
     baseScale = (cssW/W)*dpr;
     ctx.imageSmoothingEnabled = false;
   }
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function(){ setTimeout(resize, 150); });
+  window.addEventListener('load', function(){ resize(); setTimeout(resize, 200); });
 
   function toLogical(cx, cy){
     const rect = canvas.getBoundingClientRect();
@@ -892,7 +881,7 @@
   function drawProgress(){
     const need = stageQuota(stageNum);
     const p = Math.max(0, Math.min(1, stageKills/need));
-    const bw = W-24, bx = 12, by = 8;
+    const bw = W-24, bx = 12, by = HUD_H + 7;   // HUD 아래로
     ctx.fillStyle = 'rgba(10,6,22,0.6)';
     ctx.fillRect(bx-2, by-2, bw+4, 10);
     ctx.fillStyle = 'rgba(255,255,255,0.10)';
@@ -1051,7 +1040,7 @@
     }
 
     // 보스 체력바 (화면 상단 고정)
-    const bw = W-40, bx = 20, by = 26;
+    const bw = W-40, bx = 20, by = HUD_H + 10;
     ctx.fillStyle = 'rgba(10,6,22,0.72)';
     ctx.fillRect(bx-3, by-3, bw+6, 16);
     ctx.fillStyle = 'rgba(255,255,255,0.10)';
@@ -1142,9 +1131,9 @@
     // 드랍 확률
     //  룬  = 적 등급별 기본치의 1/2
     //  금화 = 룬이 안 나왔을 때 1/2 확률 (예전엔 항상 나왔음)
-    //  보호막 = 룬 확률의 1/2
+    //  보호막 = 아주 드물게만 (이미 가지고 있으면 아예 안 나옴)
     const runeChance   = (e.type==='demon' ? 0.60 : (e.type==='ghost' ? 0.24 : 0.10)) * 0.5;
-    const shieldChance = runeChance * 0.5;
+    const shieldChance = shield > 0 ? 0 : runeChance * 0.08;
     const r = Math.random();
 
     if(r < shieldChance){
@@ -1199,16 +1188,18 @@
   // ---------- 발사 ----------
   function firePattern(){
     const y = player.y-14, shots = [];
-    if(power===1){ shots.push({dx:-6,vx:0,vy:-470}); shots.push({dx:6,vx:0,vy:-470}); }
-    else if(power===2){ shots.push({dx:-8,vx:0,vy:-480}); shots.push({dx:0,vx:0,vy:-510}); shots.push({dx:8,vx:0,vy:-480}); }
-    else if(power===3){ shots.push({dx:-10,vx:-80,vy:-470}); shots.push({dx:-4,vx:0,vy:-510}); shots.push({dx:4,vx:0,vy:-510}); shots.push({dx:10,vx:80,vy:-470}); }
-    else if(power===4){ shots.push({dx:-12,vx:-145,vy:-450}); shots.push({dx:-6,vx:-60,vy:-490}); shots.push({dx:0,vx:0,vy:-540,wave:true}); shots.push({dx:6,vx:60,vy:-490}); shots.push({dx:12,vx:145,vy:-450}); }
-    else { shots.push({dx:-14,vx:-190,vy:-440}); shots.push({dx:-9,vx:-95,vy:-480}); shots.push({dx:-4,vx:0,vy:-550,wave:true}); shots.push({dx:4,vx:0,vy:-550,wave:true}); shots.push({dx:9,vx:95,vy:-480}); shots.push({dx:14,vx:190,vy:-440}); }
+    // 파워 0 = 룬을 하나도 안 먹은 시작 상태. 룬 5개(=MAX_POWER)면 최종 단계.
+    if(power<=0){ shots.push({dx:-6,vx:0,vy:-470}); shots.push({dx:6,vx:0,vy:-470}); }
+    else if(power===1){ shots.push({dx:-8,vx:0,vy:-480}); shots.push({dx:0,vx:0,vy:-510}); shots.push({dx:8,vx:0,vy:-480}); }
+    else if(power===2){ shots.push({dx:-10,vx:-80,vy:-470}); shots.push({dx:-4,vx:0,vy:-510}); shots.push({dx:4,vx:0,vy:-510}); shots.push({dx:10,vx:80,vy:-470}); }
+    else if(power===3){ shots.push({dx:-12,vx:-145,vy:-450}); shots.push({dx:-6,vx:-60,vy:-490}); shots.push({dx:0,vx:0,vy:-540,wave:true}); shots.push({dx:6,vx:60,vy:-490}); shots.push({dx:12,vx:145,vy:-450}); }
+    else if(power===4){ shots.push({dx:-14,vx:-190,vy:-440}); shots.push({dx:-9,vx:-95,vy:-480}); shots.push({dx:-4,vx:0,vy:-550,wave:true}); shots.push({dx:4,vx:0,vy:-550,wave:true}); shots.push({dx:9,vx:95,vy:-480}); shots.push({dx:14,vx:190,vy:-440}); }
+    else { shots.push({dx:-16,vx:-235,vy:-430}); shots.push({dx:-11,vx:-120,vy:-470}); shots.push({dx:-6,vx:-40,vy:-560,wave:true}); shots.push({dx:0,vx:0,vy:-580,wave:true}); shots.push({dx:6,vx:40,vy:-560,wave:true}); shots.push({dx:11,vx:120,vy:-470}); shots.push({dx:16,vx:235,vy:-430}); }
     shots.forEach(function(s){
       myBullets.push({x:player.x+s.dx,y:y,vx:s.vx,vy:s.vy,r:s.wave?7:4.5,dmg:s.wave?3:1,wave:!!s.wave,spin:Math.random()*6});
     });
   }
-  function fireInterval(){ return [0.14,0.13,0.12,0.11,0.10][Math.min(power,MAX_POWER)-1]; }
+  function fireInterval(){ return [0.15,0.14,0.13,0.12,0.105,0.095][Math.max(0,Math.min(power,MAX_POWER))]; }
 
   // ---------- 스테이지 전환 ----------
   function advanceStage(){
@@ -1219,7 +1210,6 @@
     stageKills = 0;
     stageFade = 0;
     stageBanner = 2.6;
-    statStageEl.textContent = String(stageNum);
     popText('STAGE CLEAR', '255,180,61');
     enemyBullets = [];
     boss = null; bossWarn = 0;
@@ -1347,7 +1337,6 @@
       if(t.life<=0) popTexts.splice(i,1);
     }
 
-    statScoreEl.textContent = Math.floor(score);
   }
 
   // 피격 지점. 보호막이 있으면 1회 대신 막고, 없으면 사망.
@@ -1369,10 +1358,7 @@
     burst(player.x,player.y,'255,255,255',20,1.2);
     setTimeout(showGameOver, 620);
   }
-  function renderPower(){
-    const segs = pwBarEl.children;
-    for(let i=0;i<segs.length;i++) segs[i].classList.toggle('on', i<power);
-  }
+  function renderPower(){ /* 룬 게이지는 drawHUD에서 매 프레임 그립니다 */ }
 
   // ---------- 그리기 ----------
   function draw(){
@@ -1468,6 +1454,72 @@
     if((state===S.PLAY || state===S.PAUSE) && !boss) drawProgress();
     drawStageBanner();
     drawBossWarning();
+    drawHUD();
+  }
+
+  // 화면 상단 HUD — 점수 / 스테이지 / 최고점 / 목숨 / 룬 게이지
+  function drawHUD(){
+    // 배경 띠
+    const g = ctx.createLinearGradient(0,0,0,HUD_H);
+    g.addColorStop(0,'rgba(10,6,22,0.92)'); g.addColorStop(1,'rgba(10,6,22,0.58)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,HUD_H);
+    ctx.fillStyle = 'rgba(180,92,255,0.30)'; ctx.fillRect(0,HUD_H-1,W,1);
+
+    // 왼쪽: 목숨(혼) + 룬 게이지
+    const orbR = 4 + Math.sin(animT*3.4)*0.5;
+    const og = ctx.createRadialGradient(12,12,0,12,12,7);
+    og.addColorStop(0,'#ffffff'); og.addColorStop(0.55,'#ff4d6d'); og.addColorStop(1,'#7a1030');
+    ctx.fillStyle = og;
+    ctx.beginPath(); ctx.arc(12,12,orbR+2,0,Math.PI*2); ctx.fill();
+    ctx.font = '700 8px Inter, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#9b8ac0';
+    ctx.fillText('SOUL · 단 한 번의 목숨', 22, 15);
+
+    // 룬 게이지 (칸 수 = MAX_POWER, 시작은 0칸)
+    ctx.fillStyle = '#9b8ac0';
+    ctx.font = '700 7px Inter, sans-serif';
+    ctx.fillText('RUNE', 6, 30);
+    for(let i=0;i<MAX_POWER;i++){
+      const bx = 30 + i*15, by = 25;
+      if(i < power){
+        ctx.fillStyle = i>=MAX_POWER-1 ? '#ffb43d' : '#b45cff';
+        ctx.fillRect(bx,by,12,5);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(bx,by,12,1);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(bx,by,12,5);
+      }
+    }
+    // 보호막 표시
+    if(shield > 0){
+      ctx.fillStyle = '#5ce1ff';
+      ctx.font = '800 8px Inter, sans-serif';
+      ctx.fillText('◈ SHIELD', 30+MAX_POWER*15+8, 30);
+    }
+
+    // 오른쪽: 점수 / 스테이지 / 최고
+    const cells = [
+      { v: String(Math.floor(score)), l:'점수',      c:'#ffd257' },
+      { v: String(stageNum),          l:'스테이지',  c:'#f4eeff' },
+      { v: bestScore ? String(bestScore) : '-', l:'최고', c:'#9b8ac0' }
+    ];
+    const cw = 58, gap = 4;
+    let cx = W - 6 - (cw*cells.length + gap*(cells.length-1));
+    cells.forEach(function(cel){
+      ctx.fillStyle = 'rgba(29,20,48,0.85)';
+      ctx.fillRect(cx, 5, cw, HUD_H-11);
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1;
+      ctx.strokeRect(cx+0.5, 5.5, cw-1, HUD_H-12);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = cel.c;
+      ctx.font = '800 13px Inter, sans-serif';
+      ctx.fillText(cel.v, cx+cw/2, 19);
+      ctx.fillStyle = '#8a7ab0';
+      ctx.font = '600 7px Inter, sans-serif';
+      ctx.fillText(cel.l, cx+cw/2, 28);
+      cx += cw + gap;
+    });
+    ctx.textAlign = 'left';
   }
 
   function drawHero(){
@@ -1558,7 +1610,7 @@
 
   // ---------- 흐름 ----------
   function fmtTime(s){ const m=Math.floor(s/60); return m+':'+String(s%60).padStart(2,'0'); }
-  function loadBest(){ const v=localStorage.getItem(BEST_KEY); statBestEl.textContent = v?v:'-'; }
+  function loadBest(){ const v=localStorage.getItem(BEST_KEY); bestScore = v?parseInt(v,10):0; }
   function maybeSaveBest(sc){
     const cur = localStorage.getItem(BEST_KEY);
     if(cur===null || sc>parseInt(cur,10)){ localStorage.setItem(BEST_KEY,String(sc)); loadBest(); return true; }
@@ -1573,7 +1625,7 @@
 
   function resetState(){
     elapsed=0; score=0; kills=0; alive=true; grace=1.6; shield=0;
-    power=1; maxPowerReached=1; shake=0;
+    power=0; maxPowerReached=0; shake=0;
     myBullets=[]; enemies=[]; enemyBullets=[]; items=[]; particles=[]; popTexts=[]; trail=[];
     fireCd=0; spawnCd=0.35;
     stageIdx=0; prevStageIdx=0; stageFade=1; stageBanner=2.6;
@@ -1581,8 +1633,6 @@
     boss=null; bossWarn=0;
     player.x=W/2; player.y=H-72; dragging=false;
     renderPower();
-    statScoreEl.textContent='0';
-    statStageEl.textContent='1';
   }
 
   function startGame(){
@@ -1611,7 +1661,7 @@
     finalScoreEl.textContent = fs;
     resKillsEl.textContent = kills;
     resStageEl.textContent = stageNum + ' · ' + STAGES[stageIdx].name;
-    resPowerEl.textContent = 'Lv.'+maxPowerReached;
+    resPowerEl.textContent = maxPowerReached + ' / ' + MAX_POWER;
     rankLineEl.textContent = '';
     showVeil('👆','드래그해서 조종하세요',
       '화면을 누른 채 움직이면 술사가 따라와요.<br>수리검은 자동으로 날아갑니다.',
