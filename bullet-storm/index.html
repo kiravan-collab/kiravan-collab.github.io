@@ -496,7 +496,7 @@
   //  화면 가로는 360px이므로, 예를 들어 64px 타일에 3을 주면 192px가 되어
   //  가로 약 1.9회만 반복됩니다. 도트가 뭉개지지 않도록 정수를 쓰세요.
   //  1 = 원본 크기, 2·3·4 = 확대
-  const TILE_SCALE = 4;
+  const TILE_SCALE = 2;
 
   const IMG = {};
   function loadAssets(){
@@ -704,6 +704,10 @@
     // 타일 이미지가 있으면 그것으로 바닥을 채움 (에셋팩 적용 시)
     const tile = IMG['tile_'+si];
     if(tile){
+      // 타일 이미지에 투명한 부분이 있어도 빈 공간처럼 안 보이게 바닥색을 먼저 깔아둠
+      ctx.fillStyle = st.ground;
+      ctx.fillRect(0,0,W,H);
+
       const s = Math.max(1, TILE_SCALE);
       const tw = tile.width * s, th = tile.height * s;
       const offY = ((sy % th) + th) % th;
