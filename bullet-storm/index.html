@@ -460,7 +460,11 @@
     bullet_enemy: 'assets/bullet_enemy.png',
     item_rune:    'assets/item_rune.png',
     item_coin:    'assets/item_coin.png',
-    boss:         'assets/boss.png',
+    boss_0:       'assets/boss_0.png',
+    boss_1:       'assets/boss_1.png',
+    boss_2:       'assets/boss_2.png',
+    boss_3:       'assets/boss_3.png',
+    boss_4:       'assets/boss_4.png',
     tile_0:       'assets/tile_wasteland.png',
     tile_1:       'assets/tile_forest.png',
     tile_2:       'assets/tile_snow.png',
@@ -471,7 +475,8 @@
   // 화면에 그려질 목표 가로 크기(논리 픽셀). 이미지 비율은 유지됩니다.
   const ASSET_SIZE = {
     hero:34, enemy_bat:34, enemy_ghost:30, enemy_demon:42,
-    bullet_player:14, bullet_wave:26, bullet_enemy:14, boss:88,
+    bullet_player:14, bullet_wave:26, bullet_enemy:14,
+    boss_0:92, boss_1:96, boss_2:100, boss_3:84, boss_4:104,
     item_rune:24, item_coin:20
   };
 
@@ -484,11 +489,18 @@
   //  시트가 아닌 단일 이미지면 이 목록에서 빼면 됩니다.
   //  주의: 파일이 1행짜리(예: 64x16)면 row는 반드시 0이어야 합니다.
   //        범위를 벗어난 row/col은 코드가 자동으로 0으로 보정합니다.
+  //  잡몹은 enemy_bat.png과 같은 규격: 16x16 프레임 4개를 0열부터 순환
+  //  보스는 32x32 프레임 4개(스테이지별로 다른 파일)
   const ASSET_SHEET = {
     hero:        { fw:16, fh:16, row:0, col0:1, frames:2, fps:7 },
-    enemy_bat:   { fw:16, fh:16, row:0, col0:2, frames:2, fps:4 },
+    enemy_bat:   { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
     enemy_ghost: { fw:16, fh:16, row:0, col0:0, frames:4, fps:6 },
-    enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:5 }
+    enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
+    boss_0:      { fw:60, fh:60, row:0, col0:0, frames:6, fps:6 },
+    boss_1:      { fw:62, fh:62, row:0, col0:0, frames:6, fps:6 },
+    boss_2:      { fw:68, fh:68, row:0, col0:0, frames:6, fps:6 },
+    boss_3:      { fw:50, fh:50, row:0, col0:0, frames:5, fps:8 },
+    boss_4:      { fw:76, fh:79, row:0, col0:0, frames:4, fps:5 }
   };
 
   // 배경 타일은 가로 폭에 딱 한 번 채워지고(가로 반복 없음),
@@ -1017,7 +1029,8 @@
     ctx.fillStyle = rg; ctx.fillRect(b.x-60,b.y-60,120,120);
 
     const bob = Math.sin(b.t*2.6)*2;
-    if(!drawEntity('boss', null, b.x, b.y+bob, 4, null, flash, b.t)){
+    // 스테이지마다 다른 보스 그림
+    if(!drawEntity('boss_'+stageIdx, null, b.x, b.y+bob, 4, null, flash, b.t)){
       // 폴백: 내장 악마 도트를 크게
       drawSprite(SPR.demon, b.x, b.y+bob, 4, flash ? P_WHITE : P_DEMON);
     }

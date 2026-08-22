@@ -30,9 +30,29 @@ const ASSET_SHEET = {
   hero:        { fw:16, fh:16, row:1, col0:0, frames:4, fps:7 },
   enemy_bat:   { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
   enemy_ghost: { fw:16, fh:16, row:0, col0:0, frames:4, fps:6 },
-  enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:5 }
+  enemy_demon: { fw:16, fh:16, row:0, col0:0, frames:4, fps:8 },
+  boss_0:      { fw:32, fh:32, row:0, col0:0, frames:4, fps:5 }
 };
 ```
+
+**잡몹은 `enemy_bat.png`과 같은 규격**입니다 — Ninja Adventure 팩의 `SpriteSheet.png`(64x64,
+16x16 프레임 4x4)를 그대로 쓰고 `row:0`(정면) 4프레임을 순환합니다.
+
+**보스는 팩의 `Idle.png` 가로 스트립을 그대로** 씁니다. 프레임 크기·개수가 보스마다 달라서
+`ASSET_SHEET`의 `fw`/`fh`/`frames`를 파일에 맞춰 적어야 합니다.
+스테이지마다 **다른 파일**(`boss_0`~`boss_4`)을 쓰며, 지역이 순환해도 해당 지역 보스가 나옵니다.
+
+### 현재 적용된 팩 원본 (모두 CC0)
+
+| 게임 파일 | 팩 경로 |
+|---|---|
+| `enemy_ghost.png` | `Actor/Monster/Spirit/SpriteSheet.png` |
+| `enemy_demon.png` | `Actor/Monster/Cyclope2/SpriteSheet.png` |
+| `boss_0.png` | `Actor/Boss/GiantRacoon/Idle.png` |
+| `boss_1.png` | `Actor/Boss/GiantBamboo/Idle.png` |
+| `boss_2.png` | `Actor/Boss/TenguBlue/Idle.png` |
+| `boss_3.png` | `Actor/Boss/GiantFlam/Idle.png` |
+| `boss_4.png` | `Actor/Boss/SquidRed/Idle.png` |
 
 - `fw`, `fh` — 프레임 한 칸 크기 (Ninja Adventure는 **16, 16**)
 - `row` — 사용할 행. Ninja Adventure 캐릭터는 보통 **0=아래보기, 1=위보기, 2=왼쪽, 3=오른쪽**
@@ -50,9 +70,14 @@ const ASSET_SHEET = {
 | 파일명 | 용도 | 권장 크기 |
 |---|---|---|
 | `hero.png` | 주인공 캐릭터 | 32~64px 정사각 |
-| `enemy_bat.png` | 박쥐 (약한 적) | 32~64px |
-| `enemy_ghost.png` | 유령 (중간 적) | 32~64px |
-| `enemy_demon.png` | 악마 (강한 적) | 48~96px |
+| `enemy_bat.png` | 박쥐 (약한 적) | 16x16 프레임 4개 |
+| `enemy_ghost.png` | 유령 (중간 적) | 16x16 프레임 4개 |
+| `enemy_demon.png` | 악마 (강한 적) | 16x16 프레임 4개 |
+| `boss_0.png` | 1지역 보스 · 황야의 파수꾼 | 60x60 프레임 6개 |
+| `boss_1.png` | 2지역 보스 · 숲의 마수 | 62x62 프레임 6개 |
+| `boss_2.png` | 3지역 보스 · 설산의 군주 | 68x68 프레임 6개 |
+| `boss_3.png` | 4지역 보스 · 용암의 폭군 | 50x50 프레임 5개 |
+| `boss_4.png` | 5지역 보스 · 심연의 지배자 | 76x79 프레임 4개 |
 | `bullet_player.png` | 내 공격 (수리검) | 16~32px |
 | `bullet_wave.png` | 강화 공격 (장풍) | 24~48px |
 | `bullet_enemy.png` | 적 탄환 | 16~32px |
