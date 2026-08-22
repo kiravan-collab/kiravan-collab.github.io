@@ -821,11 +821,12 @@
   }
 
   function drawBackground(){
+    // 위로 전진하는 종스크롤이므로 지형은 아래로 흘러야 함 -> 부호를 뒤집어 전달
     if(stageFade < 1){
-      drawTerrain(prevStageIdx, prevScrollY, 1);
-      drawTerrain(stageIdx, scrollY, stageFade);
+      drawTerrain(prevStageIdx, -prevScrollY, 1);
+      drawTerrain(stageIdx, -scrollY, stageFade);
     } else {
-      drawTerrain(stageIdx, scrollY, 1);
+      drawTerrain(stageIdx, -scrollY, 1);
     }
   }
 
