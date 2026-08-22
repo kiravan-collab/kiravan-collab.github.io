@@ -53,6 +53,10 @@ const ASSET_SHEET = {
 | `boss_2.png` | `Actor/Boss/TenguBlue/Idle.png` |
 | `boss_3.png` | `Actor/Boss/GiantFlam/Idle.png` |
 | `boss_4.png` | `Actor/Boss/SquidRed/Idle.png` |
+| `item_rune.png` | `FX/Projectile/ShurikenMagic.png` |
+| `item_coin.png` | `Items/Treasure/Coin2.png` |
+| `item_shield.png` | `Items/Potion/WaterPot.png` |
+| `fx_shield.png` | `FX/Magic/Shield/SpriteSheetBlue.png` |
 
 - `fw`, `fh` — 프레임 한 칸 크기 (Ninja Adventure는 **16, 16**)
 - `row` — 사용할 행. Ninja Adventure 캐릭터는 보통 **0=아래보기, 1=위보기, 2=왼쪽, 3=오른쪽**
@@ -81,8 +85,10 @@ const ASSET_SHEET = {
 | `bullet_player.png` | 내 공격 (수리검) | 16~32px |
 | `bullet_wave.png` | 강화 공격 (장풍) | 24~48px |
 | `bullet_enemy.png` | 적 탄환 | 16~32px |
-| `item_rune.png` | 룬 조각 (파워업) | 24~48px |
-| `item_coin.png` | 금화 | 24~48px |
+| `item_rune.png` | 룬 조각 (파워업) | 16x16 프레임 2개 |
+| `item_coin.png` | 금화 | 10x10 프레임 4개 |
+| `item_shield.png` | 보호막 (피격 1회 방어) | 단일 이미지 |
+| `fx_shield.png` | 보호막 발동 이펙트 | 24x26 프레임 6개 |
 | `tile_wasteland.png` | 1지역 황야 바닥 | 이어붙는(seamless) 타일 |
 | `tile_forest.png` | 2지역 숲 바닥 | 이어붙는 타일 |
 | `tile_snow.png` | 3지역 설산 바닥 | 이어붙는 타일 |
