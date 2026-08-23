@@ -1,0 +1,91 @@
+/* ============================================================
+   문서형 페이지(소개 / 개인정보처리방침 / 게임 설명) 공용 스타일
+   허브(index.html)의 색·폰트 토큰을 그대로 따릅니다.
+   ============================================================ */
+:root{
+  --bg-1:#12141f; --bg-2:#1a1e30;
+  --panel:#20243a; --panel-2:#262b45;
+  --ink:#f2efe6; --ink-dim:#9aa1c0; --ink-faint:#5c6284;
+  --line:rgba(255,255,255,0.08);
+  --accent:#33c9a3;
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body{
+  margin:0; min-height:100svh;
+  background:
+    radial-gradient(circle at 12% 0%, #232846 0%, transparent 55%),
+    radial-gradient(circle at 88% 100%, #1d2340 0%, transparent 55%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,'Malgun Gothic',sans-serif;
+  line-height:1.75;
+  padding:18px 16px calc(28px + env(safe-area-inset-bottom));
+}
+.doc{ width:100%; max-width:720px; margin:0 auto; }
+
+.topbar{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.home-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; flex-shrink:0;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; color:var(--ink); text-decoration:none; font-size:16px;
+}
+.home-btn:active{ transform:scale(0.94); }
+.topbar .where{ font-size:12.5px; color:var(--ink-faint); }
+
+h1{
+  font-family:'Baloo 2',system-ui,sans-serif; font-weight:800;
+  font-size:27px; line-height:1.3; margin:0 0 6px;
+}
+.lede{ color:var(--ink-dim); font-size:14px; margin:0 0 26px; }
+
+h2{
+  font-family:'Baloo 2',system-ui,sans-serif; font-weight:700;
+  font-size:19px; margin:30px 0 10px; padding-top:20px;
+  border-top:1px solid var(--line);
+}
+h2:first-of-type{ border-top:none; padding-top:0; }
+h3{ font-size:15px; font-weight:700; margin:20px 0 6px; color:var(--ink); }
+
+p{ margin:0 0 12px; font-size:14.5px; color:var(--ink-dim); }
+p strong, li strong{ color:var(--ink); font-weight:700; }
+a{ color:var(--accent); }
+
+ul,ol{ margin:0 0 14px; padding-left:20px; }
+li{ font-size:14.5px; color:var(--ink-dim); margin-bottom:7px; }
+
+.card{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:14px; padding:16px 18px; margin:0 0 14px;
+}
+.card h3{ margin-top:0; display:flex; align-items:center; gap:8px; }
+.card .meta{ font-size:12px; color:var(--ink-faint); margin:0 0 10px; }
+.card p:last-child{ margin-bottom:0; }
+.play{
+  display:inline-block; margin-top:6px; padding:8px 14px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+  color:var(--ink); text-decoration:none; font-size:13px; font-weight:700;
+}
+.play:active{ transform:scale(0.97); }
+
+table{ width:100%; border-collapse:collapse; margin:0 0 14px; font-size:14px; }
+th,td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); }
+th{ color:var(--ink); font-weight:700; font-size:13px; }
+td{ color:var(--ink-dim); }
+
+.note{
+  background:var(--panel-2); border:1px solid var(--line);
+  border-left:3px solid var(--accent);
+  border-radius:10px; padding:13px 15px; margin:0 0 14px;
+}
+.note p{ margin:0; font-size:13.5px; }
+
+.updated{ font-size:12.5px; color:var(--ink-faint); margin-top:24px; }
+
+.docnav{
+  margin-top:34px; padding-top:18px; border-top:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:8px 18px;
+  font-size:13px;
+}
+.docnav a{ color:var(--ink-dim); text-decoration:none; }
+.docnav a:hover{ color:var(--accent); }
