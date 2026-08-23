@@ -19,16 +19,41 @@
   firebase.initializeApp(window.FIREBASE_CONFIG);
   const db = firebase.firestore();
 
-  const PLAYER_ID_KEY = 'mg_player_id';
   const PLAYER_NAME_KEY = 'mg_player_name';
 
-  function getPlayerId() {
-    let id = localStorage.getItem(PLAYER_ID_KEY);
-    if (!id) {
-      id = 'p_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-      localStorage.setItem(PLAYER_ID_KEY, id);
+  // ----------------------------------------------------------
+  //  익명 로그인
+  //   기록 문서의 ID를 '검증 가능한' uid 로 고정하기 위한 것입니다.
+  //   예전에는 localStorage 의 랜덤 문자열을 ID로 썼기 때문에
+  //   누구나 남의 ID로 기록을 덮어쓰거나 지울 수 있었습니다.
+  //   보안 규칙(shared/firestore.rules)이 uid 와 문서 ID가 같을 때만
+  //   쓰기를 허용하므로, 이제 자기 기록 외에는 손댈 수 없습니다.
+  // ----------------------------------------------------------
+  let cachedUid = '';
+  let authReady = null;
+
+  function ensureAuth() {
+    if (authReady) return authReady;
+    if (!firebase.auth) {
+      authReady = Promise.reject(new Error('firebase-auth-compat.js 가 로드되지 않았습니다.'));
+      return authReady;
     }
-    return id;
+    authReady = new Promise(function (resolve, reject) {
+      const unsub = firebase.auth().onAuthStateChanged(function (user) {
+        if (user) { unsub(); cachedUid = user.uid; resolve(user.uid); }
+      }, reject);
+      firebase.auth().signInAnonymously().catch(function (e) {
+        console.warn('[leaderboard] 익명 로그인 실패 — Firebase 콘솔에서 Authentication > 로그인 방법 > 익명 을 사용 설정하세요.', e);
+        reject(e);
+      });
+    });
+    return authReady;
+  }
+  ensureAuth().catch(function () { /* 랭킹 없이도 게임은 동작 */ });
+
+  // 로그인 전에는 빈 문자열. 랭킹 목록에서 '내 기록' 강조에만 쓰입니다.
+  function getPlayerId() {
+    return cachedUid;
   }
 
   function getPlayerName() {
@@ -41,37 +66,44 @@
     return name;
   }
 
+  // 게임별 랭킹 점수 상한 — shared/firestore.rules 의 maxPoints() 와 반드시 같게 유지
+  const MAX_POINTS = {
+    'bullet-storm': 3000,
+    'slide-puzzle': 2500,
+    'pipe-connect': 2500,
+    'color-flood': 2000,
+    'lights-out': 2000
+  };
+  function maxPointsOf(gameId) { return MAX_POINTS[gameId] || 2000; }
+
   // 게임별 성과(이동 횟수/걸린 시간)를 비교 가능한 포인트로 환산
+  //  숫자가 아닌 값/음수/무한대가 들어와도 항상 0 ~ 상한 사이의 정수가 나옵니다.
   function computePoints(gameId, stats) {
-    const moves = Math.max(0, stats.moves || 0);
-    const timeSec = Math.max(0, stats.timeSec || 0);
+    stats = stats || {};
+    const num = function (v) { v = Number(v); return isFinite(v) && v > 0 ? v : 0; };
+    const moves = num(stats.moves);
+    const timeSec = num(stats.timeSec);
+    const cap = maxPointsOf(gameId);
 
-    // 슈팅 게임류는 게임 내 점수가 곧 랭킹 점수 (높을수록 좋음)
-    //  전체 합산 랭킹에서 다른 게임(대체로 100~2500점)을 압도하지 않도록
-    //  상한을 다른 게임과 비슷한 수준으로 둡니다.
+    let raw, floor;
     if (gameId === 'bullet-storm') {
-      return Math.max(0, Math.min(3000, Math.round(stats.score || 0)));
-    }
-
-    let raw;
-    if (gameId === 'color-flood') {
-      raw = 2000 - moves * 60 - timeSec * 4;
-    } else if (gameId === 'lights-out') {
-      raw = 2000 - moves * 50 - timeSec * 4;
-    } else if (gameId === 'slide-puzzle') {
-      raw = 2500 - moves * 20 - timeSec * 3;
-    } else if (gameId === 'pipe-connect') {
-      raw = 2500 - moves * 25 - timeSec * 3;
+      raw = num(stats.score); floor = 0;            // 슈팅류는 게임 내 점수가 곧 랭킹 점수
     } else {
-      raw = 2000 - moves * 50 - timeSec * 4;
+      floor = 100;
+      if (gameId === 'color-flood')       raw = 2000 - moves * 60 - timeSec * 4;
+      else if (gameId === 'lights-out')   raw = 2000 - moves * 50 - timeSec * 4;
+      else if (gameId === 'slide-puzzle') raw = 2500 - moves * 20 - timeSec * 3;
+      else if (gameId === 'pipe-connect') raw = 2500 - moves * 25 - timeSec * 3;
+      else                                raw = 2000 - moves * 50 - timeSec * 4;
     }
-    return Math.max(100, Math.round(raw));
+    return Math.max(floor, Math.min(cap, Math.round(raw)));
   }
 
   // 점수 제출: 이전 최고 기록보다 좋을 때만 갱신. players 컬렉션(합산용)도 함께 갱신.
+  //  기록은 반드시 '내 uid' 문서에만 쓰입니다 (보안 규칙과 동일 조건).
   async function submitScore(gameId, stats) {
-    const name = getPlayerName() || '익명';
-    const playerId = getPlayerId();
+    const playerId = await ensureAuth();      // 로그인 완료 후에만 기록
+    const name = (getPlayerName() || '익명').slice(0, 20);
     const points = computePoints(gameId, stats);
 
     const scoreRef = db.collection('scores_' + gameId).doc(playerId);
@@ -81,10 +113,14 @@
     let improved = false;
     if (points > prevPoints) {
       improved = true;
+      const clamp = function (v, hi) {
+        v = Math.round(Number(v));
+        return isFinite(v) && v > 0 ? Math.min(v, hi) : 0;
+      };
       await scoreRef.set({
         name: name,
-        moves: stats.moves,
-        timeSec: stats.timeSec,
+        moves: clamp(stats.moves, 100000),
+        timeSec: clamp(stats.timeSec, 86400),
         points: points,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -93,7 +129,11 @@
       const playerSnap = await playerRef.get();
       const perGame = playerSnap.exists ? (playerSnap.data().perGame || {}) : {};
       perGame[gameId] = points;
-      const totalPoints = Object.keys(perGame).reduce((sum, k) => sum + (perGame[k] || 0), 0);
+      // 저장된 값이 오염돼 있어도 각 게임 상한으로 잘라서 합산
+      Object.keys(perGame).forEach(function (k) {
+        perGame[k] = Math.max(0, Math.min(maxPointsOf(k), Math.round(Number(perGame[k])) || 0));
+      });
+      const totalPoints = Object.keys(perGame).reduce(function (sum, k) { return sum + perGame[k]; }, 0);
 
       await playerRef.set({
         name: name,
