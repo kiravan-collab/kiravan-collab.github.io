@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7707074644859958" crossorigin="anonymous"></script>
 <title>섀도우 룬 · 도트 판타지 탄막</title>
 <link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#0b0714">
@@ -47,8 +48,11 @@
     background:repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 10px, rgba(255,255,255,0.015) 10px 20px);
     border:1px dashed rgba(255,255,255,0.18); border-radius:10px; color:var(--ink-dim); font-size:11px;
   }
-  .ad-slot.top{ min-height:50px; max-width:320px; margin:0 auto; }
-  .ad-slot.result{ min-height:100px; margin-top:6px; }
+  /* 결과 화면 광고 — 버튼과 확실히 분리해 오클릭을 막습니다 */
+  .ad-slot.result{
+    min-height:100px; margin-top:22px; padding-top:14px;
+    border-top:1px solid rgba(255,255,255,0.10);
+  }
 
   header{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .left-group{ display:flex; align-items:center; gap:8px; }
@@ -174,9 +178,6 @@
 <body>
 
 <div class="wrap">
-  <!-- ============ 광고 영역 (상단 배너) ============ -->
-  <div class="ad-slot top">광고 영역 (320×50)</div>
-
   <header>
     <div class="left-group">
       <a class="icon-btn" href="../" title="미니게임 서랍으로">🏠</a>
@@ -219,10 +220,10 @@
       <div class="box"><div class="num" id="resPower">0</div><div class="lbl">모은 룬</div></div>
     </div>
     <div class="rank-line" id="rankLine"></div>
-    <!-- ============ 광고 영역 (결과 화면) ============ -->
-    <div class="ad-slot result">광고 영역 (결과 화면)</div>
     <button class="btn" id="retryBtn">다시 하기</button>
     <button class="btn secondary" id="viewRankFromResultBtn">🏆 전체 랭킹 보기</button>
+    <!-- 광고는 버튼 아래에 — 게임오버 직후 버튼 연타로 인한 오클릭을 막습니다 -->
+    <div class="ad-slot result">광고 영역 (결과 화면)</div>
   </div>
 </div>
 
@@ -275,7 +276,7 @@
   const BEST_KEY = 'bulletstorm_best_score_v1';
   const MAX_POWER = 10;
   //  모바일 세로 화면에 맞춰 9:16에 가깝게. 위쪽 HUD_H 만큼은 HUD가 차지합니다.
-  const W = 360, H = 680;
+  const W = 360, H = 720;
   const HUD_H = 38;
   const PX = 2;   // 도트 1칸 = 2 논리픽셀
 

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7707074644859958" crossorigin="anonymous"></script>
 <title>컬러 플러드 · 잉크를 번지게 하라</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -57,7 +58,11 @@
     letter-spacing:.04em;
   }
   .ad-slot.top{ min-height:50px; max-width:320px; margin:0 auto; }
-  .ad-slot.result{ min-height:100px; margin-top:6px; }
+  /* 결과 화면 광고 — 버튼과 확실히 분리해 오클릭을 막습니다 */
+  .ad-slot.result{
+    min-height:100px; margin-top:22px; padding-top:14px;
+    border-top:1px solid rgba(255,255,255,0.10);
+  }
 
   header{
     width:100%;
@@ -366,11 +371,10 @@
     </div>
     <div class="rank-line" id="rankLine"></div>
 
-    <!-- ============ 광고 영역 (결과 화면) ============ -->
-    <div class="ad-slot result">광고 영역 (결과 화면)</div>
-
     <button class="btn" id="retryBtn">다시 하기</button>
     <button class="btn secondary" id="viewRankFromResultBtn">🏆 전체 랭킹 보기</button>
+    <!-- 광고는 버튼 아래에 — 게임오버 직후 버튼 연타로 인한 오클릭을 막습니다 -->
+    <div class="ad-slot result">광고 영역 (결과 화면)</div>
   </div>
 </div>
 
