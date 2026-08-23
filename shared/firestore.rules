@@ -4,24 +4,20 @@ rules_version = '2';
 //  미니게임 서랍 - Firestore 보안 규칙
 //  Firebase 콘솔 > Firestore Database > 규칙 에 그대로 붙여넣고 "게시"
 //
+//  적용 전에 Authentication > 로그인 방법 > '익명' 을 먼저 사용 설정하세요.
+//
 //  막아주는 것
 //   - 남의 기록 덮어쓰기 (문서 ID = 익명 로그인 uid 로 고정)
 //   - 기록 삭제 (앱에서는 삭제 불가, 콘솔에서만 가능)
-//   - 말도 안 되는 점수 (게임별 상한 초과)
+//   - 게임별 상한을 넘는 점수
 //   - 점수 낮추기 / 되돌리기 (기존 기록보다 높을 때만 갱신)
 //   - 정의되지 않은 필드 주입
 //   - 그 외 모든 컬렉션 접근
+//
+//  주의: 아래 점수 상한은 shared/leaderboard.js 의 MAX_POINTS 와 같아야 합니다.
 // ============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 게임별 랭킹 점수 상한 (leaderboard.js 의 computePoints 와 같은 값)
-    function maxPoints(game) {
-      return game == 'bullet-storm' ? 3000
-           : game == 'slide-puzzle' ? 2500
-           : game == 'pipe-connect' ? 2500
-           : 2000;
-    }
 
     function isOwner(playerId) {
       return request.auth != null && request.auth.uid == playerId;
@@ -36,42 +32,82 @@ service cloud.firestore {
       return d.updatedAt == request.time;
     }
 
-    function validScore(game, d) {
-      return d.keys().hasOnly(['name','moves','timeSec','points','updatedAt'])
-          && d.keys().hasAll(['name','points','updatedAt'])
+    function validScore(d, cap) {
+      return d.keys().hasOnly(['name', 'moves', 'timeSec', 'points', 'updatedAt'])
+          && d.keys().hasAll(['name', 'points', 'updatedAt'])
           && validName(d.name)
-          && d.points is number && d.points >= 0 && d.points <= maxPoints(game)
-          && (!('moves' in d)   || (d.moves   is number && d.moves   >= 0 && d.moves   <= 100000))
+          && d.points is number && d.points >= 0 && d.points <= cap
+          && (!('moves' in d) || (d.moves is number && d.moves >= 0 && d.moves <= 100000))
           && (!('timeSec' in d) || (d.timeSec is number && d.timeSec >= 0 && d.timeSec <= 86400))
           && serverTime(d);
     }
 
-    match /scores_{game}/{playerId} {
+    function canCreateScore(playerId, cap) {
+      return isOwner(playerId) && validScore(request.resource.data, cap);
+    }
+
+    // 기존 기록보다 높을 때만 갱신 — 점수 되돌리기/깎기 차단
+    function canUpdateScore(playerId, cap) {
+      return isOwner(playerId)
+          && validScore(request.resource.data, cap)
+          && request.resource.data.points > resource.data.points;
+    }
+
+    // ---- 게임별 랭킹 --------------------------------------
+    //  경로 중간에는 와일드카드를 쓸 수 없어 컬렉션마다 따로 적습니다.
+
+    match /scores_bullet-storm/{playerId} {
       allow read: if true;
-      allow create: if isOwner(playerId) && validScore(game, request.resource.data);
-      // 기존 기록보다 높을 때만 갱신 — 점수 되돌리기/깎기 차단
-      allow update: if isOwner(playerId)
-                    && validScore(game, request.resource.data)
-                    && request.resource.data.points > resource.data.points;
+      allow create: if canCreateScore(playerId, 3000);
+      allow update: if canUpdateScore(playerId, 3000);
       allow delete: if false;
     }
 
+    match /scores_slide-puzzle/{playerId} {
+      allow read: if true;
+      allow create: if canCreateScore(playerId, 2500);
+      allow update: if canUpdateScore(playerId, 2500);
+      allow delete: if false;
+    }
+
+    match /scores_pipe-connect/{playerId} {
+      allow read: if true;
+      allow create: if canCreateScore(playerId, 2500);
+      allow update: if canUpdateScore(playerId, 2500);
+      allow delete: if false;
+    }
+
+    match /scores_color-flood/{playerId} {
+      allow read: if true;
+      allow create: if canCreateScore(playerId, 2000);
+      allow update: if canUpdateScore(playerId, 2000);
+      allow delete: if false;
+    }
+
+    match /scores_lights-out/{playerId} {
+      allow read: if true;
+      allow create: if canCreateScore(playerId, 2000);
+      allow update: if canUpdateScore(playerId, 2000);
+      allow delete: if false;
+    }
+
+    // ---- 전체 합산 랭킹 ------------------------------------
     match /players/{playerId} {
       allow read: if true;
       allow create, update: if isOwner(playerId)
-                    && request.resource.data.keys().hasOnly(['name','perGame','totalPoints','updatedAt'])
-                    && request.resource.data.keys().hasAll(['name','perGame','totalPoints','updatedAt'])
-                    && validName(request.resource.data.name)
-                    && request.resource.data.perGame is map
-                    && request.resource.data.perGame.size() <= 20
-                    && request.resource.data.totalPoints is number
-                    && request.resource.data.totalPoints >= 0
-                    && request.resource.data.totalPoints <= 20000
-                    && serverTime(request.resource.data);
+          && request.resource.data.keys().hasOnly(['name', 'perGame', 'totalPoints', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['name', 'perGame', 'totalPoints', 'updatedAt'])
+          && validName(request.resource.data.name)
+          && request.resource.data.perGame is map
+          && request.resource.data.perGame.size() <= 20
+          && request.resource.data.totalPoints is number
+          && request.resource.data.totalPoints >= 0
+          && request.resource.data.totalPoints <= 20000
+          && serverTime(request.resource.data);
       allow delete: if false;
     }
 
-    // 그 외 전부 차단
+    // ---- 그 외 전부 차단 -----------------------------------
     match /{document=**} {
       allow read, write: if false;
     }
