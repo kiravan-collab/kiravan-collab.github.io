@@ -63,6 +63,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /scores_merge-2048/{playerId} {
+      allow read: if true;
+      allow create: if canCreateScore(playerId, 2000);
+      allow update: if canUpdateScore(playerId, 2000);
+      allow delete: if false;
+    }
+
     match /scores_slide-puzzle/{playerId} {
       allow read: if true;
       allow create: if canCreateScore(playerId, 2000);

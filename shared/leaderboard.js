@@ -91,6 +91,7 @@
   // 게임별 랭킹 점수 상한 — shared/firestore.rules 의 상한과 반드시 같게 유지
   const MAX_POINTS = {
     'bullet-storm': SCORE_CAP,
+    'merge-2048':   SCORE_CAP,
     'slide-puzzle': SCORE_CAP,
     'pipe-connect': SCORE_CAP,
     'color-flood':  SCORE_CAP,
@@ -104,9 +105,14 @@
     stats = stats || {};
     const num = function (v) { v = Number(v); return isFinite(v) && v > 0 ? v : 0; };
 
-    // 슈팅류는 게임 안에서 이미 계산된 점수가 곧 랭킹 점수
+    // 점수형 게임 — 게임 안에서 이미 계산된 점수를 환산해서 씁니다
     if (gameId === 'bullet-storm') {
       return Math.max(0, Math.min(SCORE_CAP, Math.round(num(stats.score))));
+    }
+    // 2048 은 게임 점수가 수만 단위라 1/10 로 줄입니다.
+    //  (2048 타일 도달 = 게임 점수 약 20,000 = 상한 2000점)
+    if (gameId === 'merge-2048') {
+      return Math.max(0, Math.min(SCORE_CAP, Math.round(num(stats.score) / 10)));
     }
 
     const c = SCORING[gameId] || SCORING['lights-out'];
