@@ -252,6 +252,15 @@
   .rank-row.top1 .pos{ color:#ffd76a; }
   .rank-row.top2 .pos{ color:#d9dbe6; }
   .rank-row.top3 .pos{ color:#e0a672; }
+  /* 게임별 1위 행 — 왼쪽에 게임 이름, 가운데 보유자와 기록, 오른쪽 점수 */
+  .rank-row.champ{ align-items:center; }
+  .rank-row .cg{
+    width:96px; flex-shrink:0; font-size:11.5px; font-weight:700;
+    color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .rank-row.champ.empty{ opacity:0.6; }
+  /* 안내 문구는 잘리지 않게 줄바꿈 허용 */
+  .rank-row.champ.empty .rbreak{ font-size:10.5px; white-space:normal; line-height:1.45; }
   .rank-row .rinfo{ flex:1; min-width:0; }
   .rank-row .rname{ font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .rank-row .rbreak{ font-size:10px; color:var(--ink-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -282,7 +291,7 @@
       <div class="title"><span class="dot"></span>미니게임 서랍</div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="rank-btn" id="installBtn" style="display:none;">📲 홈화면바로가기</button>
-        <button class="rank-btn" id="overallRankBtn">🏆 전체 랭킹</button>
+        <button class="rank-btn" id="overallRankBtn">🏆 게임별 1위</button>
       </div>
     </div>
     <div class="subtitle">심심할 때 꺼내서 한 판, 부담 없이.</div>
@@ -313,11 +322,11 @@
   </div>
 </div>
 
-<!-- 전체 게임 합산 랭킹 모달 -->
+<!-- 게임별 1위 모달 -->
 <div class="overlay" id="rankOverlay">
   <div class="modal">
-    <div class="big">🏆 전체 합산 랭킹</div>
-    <div class="sub">등록된 모든 게임의 최고 점수를 합산한 순위예요</div>
+    <div class="big">🏆 게임별 1위</div>
+    <div class="sub">각 게임의 최고 기록 보유자예요</div>
     <div class="rank-list" id="rankList"><div class="rank-loading">불러오는 중...</div></div>
     <button class="btn" id="rankCloseBtn">닫기</button>
   </div>
@@ -342,7 +351,7 @@
   const GAMES = [
     {
       id: 'merge-2048',
-      title: '2048 머지',
+      title: '1024 머지',
       time: '1~3분',
       href: 'merge-2048/',
       emoji: '🔶',
@@ -464,7 +473,7 @@
 
   render();
 
-  // -------- 전체 게임 합산 랭킹 --------
+  // -------- 게임별 1위 --------
   const overallRankBtn = document.getElementById('overallRankBtn');
   const rankOverlayEl = document.getElementById('rankOverlay');
   const rankListEl = document.getElementById('rankList');
@@ -477,6 +486,21 @@
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // 게임마다 기록의 성격이 달라서(이동 횟수 / 처치 수 / 점수) 게임별 단위를 그대로 보여줍니다.
+  const RECORD_LABEL = {
+    'bullet-storm': function(r){ return fmtNum(r.moves) + '처치 · ' + fmtTime(r.timeSec); },
+    'merge-2048':   function(r){ return fmtNum(r.moves) + '수 · ' + fmtTime(r.timeSec); },
+    'pipe-connect': function(r){ return fmtNum(r.moves) + '회전 · ' + fmtTime(r.timeSec); },
+    'color-flood':  function(r){ return fmtNum(r.moves) + '수 · ' + fmtTime(r.timeSec); },
+    'lights-out':   function(r){ return fmtNum(r.moves) + '번 누름 · ' + fmtTime(r.timeSec); },
+    'slide-puzzle': function(r){ return fmtNum(r.moves) + '수 · ' + fmtTime(r.timeSec); }
+  };
+  function fmtNum(n){ return (Number(n) || 0).toLocaleString(); }
+  function fmtTime(sec){
+    sec = Math.max(0, Math.round(Number(sec) || 0));
+    return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+  }
+
   async function openOverallRanking(){
     rankOverlayEl.classList.add('show');
     rankListEl.innerHTML = '<div class="rank-loading">불러오는 중...</div>';
@@ -485,25 +509,33 @@
       return;
     }
     try{
-      const list = await window.MiniGameLeaderboard.fetchOverallTop(10);
-      if(list.length === 0){
-        rankListEl.innerHTML = '<div class="rank-empty">아직 등록된 기록이 없어요. 게임을 플레이해서 첫 기록을 남겨보세요!</div>';
-        return;
-      }
+      const ids = GAMES.map(function(g){ return g.id; });
+      const list = await window.MiniGameLeaderboard.fetchChampions(ids);
+      const byId = {};
+      GAMES.forEach(function(g){ byId[g.id] = g; });
+
       rankListEl.innerHTML = '';
-      list.forEach((row, i) => {
-        const perGame = row.perGame || {};
-        const breakdown = Object.keys(perGame)
-          .map(id => (gameTitleMap[id] || id) + ' ' + perGame[id])
-          .join(' · ');
+      list.forEach(function(item){
+        const g = byId[item.gameId] || {};
         const div = document.createElement('div');
-        div.className = 'rank-row' + (i===0?' top1':i===1?' top2':i===2?' top3':'');
-        div.innerHTML = `<div class="pos">${i+1}</div>
-          <div class="rinfo">
-            <div class="rname">${escapeHtml(row.name || '익명')}</div>
-            <div class="rbreak">${escapeHtml(breakdown)}</div>
-          </div>
-          <div class="rpts">${row.totalPoints}점</div>`;
+        div.className = 'rank-row champ';
+        const head = '<div class="cg">' + (g.emoji || '🎮') + ' ' +
+                     escapeHtml(g.title || item.gameId) + '</div>';
+        if(item.champion){
+          const c = item.champion;
+          const fmt = RECORD_LABEL[item.gameId];
+          const rec = fmt ? fmt(c) : (fmtNum(c.moves) + '수 · ' + fmtTime(c.timeSec));
+          div.innerHTML = head +
+            '<div class="rinfo">' +
+              '<div class="rname">👑 ' + escapeHtml(c.name || '익명') + '</div>' +
+              '<div class="rbreak">' + escapeHtml(rec) + '</div>' +
+            '</div>' +
+            '<div class="rpts">' + fmtNum(c.points) + '점</div>';
+        } else {
+          div.classList.add('empty');
+          div.innerHTML = head +
+            '<div class="rinfo"><div class="rbreak">아직 기록이 없어요 — 첫 주인공이 되어보세요!</div></div>';
+        }
         rankListEl.appendChild(div);
       });
     }catch(e){

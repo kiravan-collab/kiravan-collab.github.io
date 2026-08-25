@@ -12,7 +12,7 @@ rules_version = '2';
 //   - 게임별 상한을 넘는 점수
 //   - 점수 낮추기 / 되돌리기 (기존 기록보다 높을 때만 갱신)
 //   - 정의되지 않은 필드 주입
-//   - 그 외 모든 컬렉션 접근
+//   - 그 외 모든 컬렉션 접근 (전체 합산 랭킹용 players 컬렉션도 이제 차단)
 //
 //  주의: 아래 점수 상한은 shared/leaderboard.js 의 MAX_POINTS 와 같아야 합니다.
 // ============================================================
@@ -95,22 +95,6 @@ service cloud.firestore {
       allow read: if true;
       allow create: if canCreateScore(playerId, 2000);
       allow update: if canUpdateScore(playerId, 2000);
-      allow delete: if false;
-    }
-
-    // ---- 전체 합산 랭킹 ------------------------------------
-    match /players/{playerId} {
-      allow read: if true;
-      allow create, update: if isOwner(playerId)
-          && request.resource.data.keys().hasOnly(['name', 'perGame', 'totalPoints', 'updatedAt'])
-          && request.resource.data.keys().hasAll(['name', 'perGame', 'totalPoints', 'updatedAt'])
-          && validName(request.resource.data.name)
-          && request.resource.data.perGame is map
-          && request.resource.data.perGame.size() <= 20
-          && request.resource.data.totalPoints is number
-          && request.resource.data.totalPoints >= 0
-          && request.resource.data.totalPoints <= 20000
-          && serverTime(request.resource.data);
       allow delete: if false;
     }
 

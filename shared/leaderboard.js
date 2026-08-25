@@ -3,7 +3,10 @@
 // 모든 게임 페이지 + 허브 페이지가 이 파일을 함께 사용합니다.
 // Firestore 컬렉션 구조:
 //   scores_{gameId} / {playerId}  -> { name, moves, timeSec, points, updatedAt }
-//   players / {playerId}          -> { name, perGame: {gameId: points, ...}, totalPoints, updatedAt }
+//
+//  전체 합산 랭킹(players 컬렉션)은 사용하지 않습니다.
+//  게임마다 잘하는 기준이 달라 하나의 점수로 합치면 각 게임의 성격이 사라져서,
+//  대신 '게임별 1위'를 모아 보여주는 방식으로 바꿨습니다.
 // ============================================================
 (function (window) {
   "use strict";
@@ -109,10 +112,10 @@
     if (gameId === 'bullet-storm') {
       return Math.max(0, Math.min(SCORE_CAP, Math.round(num(stats.score))));
     }
-    // 2048 은 게임 점수가 수만 단위라 1/10 로 줄입니다.
-    //  (2048 타일 도달 = 게임 점수 약 20,000 = 상한 2000점)
+    // 숫자 합치기(1024 머지)는 게임 점수가 수천 단위라 1/4 로 줄입니다.
+    //  (1024 타일 클리어 = 게임 점수 약 7,300~8,000 = 1800~2000점)
     if (gameId === 'merge-2048') {
-      return Math.max(0, Math.min(SCORE_CAP, Math.round(num(stats.score) / 10)));
+      return Math.max(0, Math.min(SCORE_CAP, Math.round(num(stats.score) / 4)));
     }
 
     const c = SCORING[gameId] || SCORING['lights-out'];
@@ -122,7 +125,7 @@
     return Math.max(SCORE_MIN, Math.min(SCORE_CAP, Math.round(raw)));
   }
 
-  // 점수 제출: 이전 최고 기록보다 좋을 때만 갱신. players 컬렉션(합산용)도 함께 갱신.
+  // 점수 제출: 이전 최고 기록보다 좋을 때만 갱신합니다.
   //  기록은 반드시 '내 uid' 문서에만 쓰입니다 (보안 규칙과 동일 조건).
   async function submitScore(gameId, stats) {
     const playerId = await ensureAuth();      // 로그인 완료 후에만 기록
@@ -148,22 +151,6 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      const playerRef = db.collection('players').doc(playerId);
-      const playerSnap = await playerRef.get();
-      const perGame = playerSnap.exists ? (playerSnap.data().perGame || {}) : {};
-      perGame[gameId] = points;
-      // 저장된 값이 오염돼 있어도 각 게임 상한으로 잘라서 합산
-      Object.keys(perGame).forEach(function (k) {
-        perGame[k] = Math.max(0, Math.min(maxPointsOf(k), Math.round(Number(perGame[k])) || 0));
-      });
-      const totalPoints = Object.keys(perGame).reduce(function (sum, k) { return sum + perGame[k]; }, 0);
-
-      await playerRef.set({
-        name: name,
-        perGame: perGame,
-        totalPoints: totalPoints,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
     }
 
     const bestPoints = Math.max(points, prevPoints);
@@ -182,12 +169,19 @@
     return snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
   }
 
-  async function fetchOverallTop(limitCount) {
-    const snap = await db.collection('players')
-      .orderBy('totalPoints', 'desc')
-      .limit(limitCount || 10)
-      .get();
-    return snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+  // 게임별 1위만 모아서 반환. 기록이 없는 게임은 champion 이 null 입니다.
+  async function fetchChampions(gameIds) {
+    const jobs = gameIds.map(function (gid) {
+      return db.collection('scores_' + gid)
+        .orderBy('points', 'desc').limit(1).get()
+        .then(function (snap) {
+          if (snap.empty) return { gameId: gid, champion: null };
+          const d = snap.docs[0];
+          return { gameId: gid, champion: Object.assign({ id: d.id }, d.data()) };
+        })
+        .catch(function () { return { gameId: gid, champion: null, failed: true }; });
+    });
+    return Promise.all(jobs);
   }
 
   window.MiniGameLeaderboard = {
@@ -197,6 +191,6 @@
     computePoints: computePoints,
     submitScore: submitScore,
     fetchTopScores: fetchTopScores,
-    fetchOverallTop: fetchOverallTop
+    fetchChampions: fetchChampions
   };
 })(window);

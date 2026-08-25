@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7707074644859958" crossorigin="anonymous"></script>
-<title>2048 머지 · 숫자를 합쳐라</title>
-<meta name="description" content="같은 숫자를 밀어서 합치는 2048 퍼즐. 설치 없이 브라우저에서 바로 즐기고 랭킹에 도전하세요.">
+<title>1024 머지 · 숫자를 합쳐라</title>
+<meta name="description" content="같은 숫자를 밀어서 합치는 숫자 퍼즐. 1024 타일을 만들면 클리어! 설치 없이 브라우저에서 바로 즐기고 랭킹에 도전하세요.">
 <link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#12141f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="2048 머지">
+<meta name="apple-mobile-web-app-title" content="1024 머지">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -186,7 +186,7 @@
   <header>
     <div class="left-group">
       <a class="icon-btn" href="../" title="미니게임 서랍으로">🏠</a>
-      <div class="title"><span class="chip"></span>2048 머지</div>
+      <div class="title"><span class="chip"></span>1024 머지</div>
     </div>
     <div class="right-group">
       <button class="icon-btn" id="helpOpenBtn" title="게임 설명">?</button>
@@ -197,7 +197,7 @@
   <div class="stats">
     <div class="stat"><div class="num" id="statScore">0</div><div class="lbl">점수</div></div>
     <div class="stat"><div class="num" id="statBest">-</div><div class="lbl">최고</div></div>
-    <div class="stat"><div class="num" id="statTop">2</div><div class="lbl">최고 타일</div></div>
+    <div class="stat"><div class="num" id="statTop">8</div><div class="lbl">최고 타일</div></div>
   </div>
 
   <div class="board-card">
@@ -218,13 +218,13 @@
     <div class="final-score" id="finalScore">0</div>
     <div class="sub" style="margin-bottom:12px;">최종 점수</div>
     <div class="row">
-      <div class="box"><div class="num" id="resTop">2</div><div class="lbl">최고 타일</div></div>
+      <div class="box"><div class="num" id="resTop">8</div><div class="lbl">최고 타일</div></div>
       <div class="box"><div class="num" id="resMoves">0</div><div class="lbl">이동 횟수</div></div>
       <div class="box"><div class="num" id="resTime">0:00</div><div class="lbl">걸린 시간</div></div>
     </div>
     <div class="rank-line" id="rankLine"></div>
     <button class="btn" id="retryBtn">다시 하기</button>
-    <button class="btn secondary" id="viewRankFromResultBtn">🏆 전체 랭킹 보기</button>
+    <button class="btn secondary" id="viewRankFromResultBtn">🏆 랭킹 보기</button>
     <!-- 광고는 버튼 아래에 — 게임오버 직후 버튼 연타로 인한 오클릭을 막습니다 -->
     <div class="ad-slot result">광고 영역 (결과 화면)</div>
   </div>
@@ -243,7 +243,7 @@
 <!-- 랭킹 -->
 <div class="overlay" id="rankOverlay">
   <div class="modal">
-    <div class="big">🏆 2048 머지 랭킹</div>
+    <div class="big">🏆 1024 머지 랭킹</div>
     <div class="sub">최종 점수가 높을수록 순위가 올라가요</div>
     <div class="rank-list" id="rankList"><div class="rank-loading">불러오는 중...</div></div>
     <button class="btn secondary" id="rankCloseBtn">닫기</button>
@@ -259,9 +259,9 @@
       <li><b>조작</b> — 화면을 상하좌우로 밀면 모든 타일이 그 방향으로 움직여요. 키보드 방향키도 됩니다.</li>
       <li><b>합치기</b> — 같은 숫자끼리 부딪히면 하나로 합쳐지고, 합친 숫자만큼 점수가 오릅니다.</li>
       <li><b>한 번에 한 번만</b> — 한 이동에서 같은 타일이 두 번 합쳐지지는 않아요.</li>
-      <li><b>새 타일</b> — 움직일 때마다 빈칸에 2 또는 4가 하나 생깁니다.</li>
+      <li><b>새 타일</b> — 움직일 때마다 빈칸에 8 또는 16이 하나 생깁니다.</li>
       <li><b>게임 오버</b> — 빈칸이 없고 합칠 수 있는 이웃도 없으면 끝납니다.</li>
-      <li><b>목표</b> — <b style="color:#ff6b5b">2048</b> 타일을 만들면 최고 점수에 도달해요. 만든 뒤에도 계속 이어갈 수 있습니다.</li>
+      <li><b>목표</b> — <b style="color:#ff4d6d">1024</b> 타일을 만들면 그 자리에서 클리어! 한 판이 2~3분이면 끝납니다.</li>
     </ul>
     <button class="btn secondary" id="helpCloseBtn">닫기</button>
   </div>
@@ -278,9 +278,16 @@
 (function(){
   "use strict";
 
+  // GAME_ID 는 처음 만들 때의 이름 그대로입니다(랭킹 컬렉션 이름이라 바꾸지 않습니다).
   const GAME_ID = 'merge-2048';
   const SIZE = 4;
   const BEST_KEY = 'merge2048_best_score_v1';
+
+  //  한 판을 1~3분으로 맞추기 위한 값들.
+  //   시작 타일이 2/4 이면 1024 까지 500수 넘게 걸려 9분이 넘습니다.
+  //   8/16 으로 시작하면 같은 목표를 130수 남짓, 약 2분 30초에 도달합니다.
+  const GOAL = 1024;
+  const SPAWN = [[8, 0.9], [16, 0.1]];
 
   // 타일 색 — 숫자가 커질수록 차가운 색에서 뜨거운 색으로
   const TILE_STYLE = {
@@ -293,7 +300,7 @@
     128:  { bg:'#ffc65c', fg:'#3a2600' },
     256:  { bg:'#ffa94d', fg:'#3a1c00' },
     512:  { bg:'#ff8a5c', fg:'#3a1400' },
-    1024: { bg:'#ff6b5b', fg:'#3a0d0a' },
+    1024: { bg:'#ff4d6d', fg:'#ffffff' },
     2048: { bg:'#ff4d6d', fg:'#ffffff' },
     4096: { bg:'#b45cff', fg:'#ffffff' },
     8192: { bg:'#8b7bf7', fg:'#ffffff' }
@@ -303,9 +310,9 @@
   let grid = [];          // SIZE x SIZE, 각 칸은 타일 객체 또는 null
   let tiles = new Map();  // id -> {id, v, r, c, el}
   let nextId = 1;
-  let score = 0, movesUsed = 0, topTile = 2;
+  let score = 0, movesUsed = 0, topTile = 8;
   let startTime = 0, timerId = null;
-  let ended = false, reached2048 = false;
+  let ended = false, cleared = false;
   let pendingSubmitStats = null;
   let busy = false;
 
@@ -424,7 +431,10 @@
     const cells = emptyCells();
     if(cells.length === 0) return null;
     const [r,c] = cells[Math.floor(Math.random()*cells.length)];
-    return makeTile(r, c, Math.random() < 0.9 ? 2 : 4);
+    const x = Math.random();
+    let acc = 0, v = SPAWN[SPAWN.length-1][0];
+    for(const pair of SPAWN){ acc += pair[1]; if(x < acc){ v = pair[0]; break; } }
+    return makeTile(r, c, v);
   }
 
   // 방향별 순회 순서 — 이동 방향의 끝에서부터 처리해야 밀림이 올바릅니다
@@ -460,7 +470,7 @@
             mergedThisMove.add(target.id);
             gained += target.v;
             if(target.v > topTile) topTile = target.v;
-            if(target.v === 2048) reached2048 = true;
+            if(target.v >= GOAL) cleared = true;
             // 합쳐지는 타일은 목표 칸으로 이동시킨 뒤 제거
             tile.r = tr; tile.c = tc;
             placeTile(tile, true);
@@ -491,6 +501,8 @@
     renderStats();
 
     setTimeout(function(){
+      // 목표 타일을 만들면 그 자리에서 클리어 (한 판을 짧게 유지)
+      if(cleared){ busy = false; endGame(); return; }
       spawn();
       busy = false;
       if(!canMove()) endGame();
@@ -567,8 +579,9 @@
     const totalSec = Math.floor((Date.now()-startTime)/1000);
 
     const newBest = maybeSaveBest(score);
-    resultTitleEl.textContent = reached2048 ? '2048 달성!' : '더 움직일 수 없어요';
-    resultSubEl.textContent = newBest ? '신기록이에요!' : (reached2048 ? '목표 타일을 만들었어요' : '숫자가 가득 찼습니다');
+    resultTitleEl.textContent = cleared ? '1024 달성!' : '더 움직일 수 없어요';
+    resultSubEl.textContent = newBest ? '신기록이에요!'
+                            : (cleared ? '목표 타일을 만들었어요' : '숫자가 가득 찼습니다');
     finalScoreEl.textContent = score;
     resTopEl.textContent = topTile;
     resMovesEl.textContent = movesUsed;
@@ -651,8 +664,8 @@
 
   // ---------- 새 게임 ----------
   function newGame(){
-    ended = false; busy = false; reached2048 = false;
-    score = 0; movesUsed = 0; topTile = 2;
+    ended = false; busy = false; cleared = false;
+    score = 0; movesUsed = 0; topTile = 8;
     tiles.forEach(function(t){ if(t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el); });
     tiles.clear();
     grid = [];
